@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Talleres de tacógrafo</title>
+<meta name="description" content="Mapa comercial de talleres de tacógrafo: clientes, visitas, ventas y rutas.">
+<meta name="theme-color" content="#0d6b72">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="css/app.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+</head>
+<body>
+<div id="cargando" class="cargando"><div class="spinner" aria-hidden="true"></div><p>Cargando…</p></div>
+<div id="login" class="login" hidden></div>
+
+<div id="app" hidden>
+  <header class="top">
+    <div class="brand"><img src="icons/icon-192.png" alt="" width="28" height="28"><span class="app-nombre">Talleres de tacógrafo</span></div>
+    <nav class="nav" aria-label="Secciones">
+      <button data-ir="mapa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 2.2 6 2v11.6l-6-2V6.2Z"/></svg><span>Mapa</span></button>
+      <button data-ir="agenda"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7Zm-2 8h14v10H5V10Z"/></svg><span>Agenda</span><i class="badge-n badge-agenda" hidden></i></button>
+      <button data-ir="ruta"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3a3 3 0 0 0-1 5.8V21h2v-4h6a4 4 0 0 0 0-8H9a2 2 0 0 1 0-4h6.2A3 3 0 1 0 18 3a3 3 0 0 0-2.8 2H9a4 4 0 0 0 0 8h4a2 2 0 0 1 0 4H7V8.8A3 3 0 0 0 6 3Z"/></svg><span>Ruta</span><i class="badge-n badge-ruta" hidden></i></button>
+      <button data-ir="panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10h3v10H4Zm6.5 0V4h3v16h-3ZM17 20v-7h3v7h-3Z"/></svg><span>Resultados</span></button>
+      <button data-ir="admin" class="solo-admin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm8.9 5a7 7 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1L16.5 3h-4l-.3 2.6a7 7 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.3 2.4h4l.3-2.6a7 7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6Z" transform="scale(.9) translate(1.3 1.3)"/></svg><span>Gestión</span></button>
+    </nav>
+    <div class="top-r"><span id="sync" class="sync" title="Conectando"><i></i></span><button id="yo" class="yo" aria-label="Tu cuenta"></button></div>
+  </header>
+
+  <main>
+    <section id="v-mapa" class="view mapa-view">
+      <div class="mapwrap">
+        <div id="map" aria-label="Mapa de talleres"></div>
+        <div class="float tl">
+          <button class="chip" id="btnCerca" aria-pressed="false">Cerca de mí</button>
+          <button class="chip" data-vista-mapa="es">Península</button>
+          <button class="chip" data-vista-mapa="pt">Portugal</button>
+          <button class="chip" data-vista-mapa="ic">Canarias</button>
+          <button class="chip" data-vista-mapa="bal">Baleares</button>
+          <span class="chip"><label for="colorModo">Color</label><select id="colorModo"><option value="estado">Estado</option><option value="red">Red de marca</option><option value="comercial">Comercial</option></select></span>
+          <span class="chip"><label for="capaProv">Provincias</label><select id="capaProv"><option value="">No</option><option value="total">Talleres</option><option value="cliente">Clientes</option><option value="competencia">Competencia</option><option value="libres">Sin comercial</option><option value="hueco">Sin clientes</option></select></span>
+        </div>
+        <div class="float bl"><div class="legend" id="leyenda"></div></div>
+        <div class="float bc" id="barraColocar" hidden><div class="colocar"><span id="colocarTxt"></span><button class="btn primary" id="colocarOk">Guardar posición</button><button class="btn" id="colocarNo">Cancelar</button></div></div>
+      </div>
+      <aside class="side" id="filtros">
+        <div class="searchrow"><input class="search" id="fQ" type="search" placeholder="Buscar taller, población, CIF o teléfono" aria-label="Buscar"><button class="btn" id="togFiltros" aria-expanded="false" aria-controls="masFiltros">Filtros</button></div>
+        <div class="mas-filtros" id="masFiltros">
+        <div class="grid2 tight">
+          <select id="fZona" aria-label="Comunidad o país"></select>
+          <select id="fProv" aria-label="Provincia"></select>
+          <select id="fCom" aria-label="Comercial"></select>
+          <select id="fOrigen" aria-label="Origen"><option value="">Todos los orígenes</option><option value="reg">Registro oficial España</option><option value="ipq">Registro oficial Portugal</option><option value="kmz">Recopilatorio 2025</option><option value="manual">Añadidos por el equipo</option><option value="import">Importados de Excel</option></select>
+        </div>
+        <div class="chips" id="fEstados" aria-label="Estado"></div>
+        <div class="chips" id="fRedes" aria-label="Red de marca"></div>
+        <div class="row-between"><label class="note chk"><input type="checkbox" id="fSinVisita"> Sin visitar en 90 días</label><button class="linklike" id="fLimpiar">Quitar filtros</button></div>
+        </div>
+        <div class="row-between list-head"><span class="note"><b id="nVisibles">0</b> en el mapa · <span id="nLista"></span></span><span><button class="linklike" id="nuevoTaller">Añadir taller</button> · <button class="linklike" id="exportLista">Excel</button></span></div>
+        <div class="list" id="lista"></div>
+      </aside>
+    </section>
+    <section id="v-agenda" class="view pad-view" hidden></section>
+    <section id="v-ruta" class="view pad-view" hidden></section>
+    <section id="v-panel" class="view pad-view" hidden></section>
+    <section id="v-admin" class="view pad-view" hidden></section>
+  </main>
+  <aside id="ficha" class="ficha" hidden aria-label="Ficha del taller"></aside>
+</div>
+<div id="modal" class="modal" hidden></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
