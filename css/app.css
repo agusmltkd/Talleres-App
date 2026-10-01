@@ -3,9 +3,9 @@
    en móvil, barra de secciones abajo, mapa arriba y lista debajo, ficha a pantalla completa. */
 :root {
   --bg: #eef1f3; --panel: #ffffff; --fg: #18202b; --muted: #5b6776; --line: #dde3e9; --line-strong: #8c99a6; --soft: #f5f7f9;
-  --accent: #0d6b72; --accent-fg: #ffffff; --accent-soft: #e2f1f1;
+  --accent: #1f7f4a; --accent-fg: #ffffff; --accent-soft: #e3f2e9;
   --st-cliente: #1f9d55; --st-potencial: #2f6fde; --st-competencia: #d4453a; --st-descartado: #8b95a1; --st-none: #ffffff;
-  --r-vdo: #ef7d16; --r-stoneridge: #1f4e9c; --r-wortach: #7b3fb0; --r-maha: #c62828; --r-tekson: #11867e; --r-none: #9aa4ae;
+  --r-vdo: #ef7d16; --r-stoneridge: #1f4e9c; --r-wortach: #268c56; --r-maha: #c62828; --r-tekson: #0891b2; --r-none: #9aa4ae;
   --ok: #1f9d55; --warn: #b26b00; --bad: #c43b31;
   --f: "IBM Plex Sans", "Segoe UI", Roboto, Arial, sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
@@ -15,15 +15,15 @@
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #11161c; --panel: #19202a; --fg: #e6ebf0; --muted: #9aa7b5; --line: #2a3441; --line-strong: #5d6b7a; --soft: #1f2833;
-  --accent: #4fb8bf; --accent-fg: #07292b; --accent-soft: #4fb8bf22;
+  --accent: #52c487; --accent-fg: #062a15; --accent-soft: #52c48722;
   --st-cliente: #3cc27a; --st-potencial: #6b9cf0; --st-competencia: #ef6a5e; --st-descartado: #7d8894; --st-none: #d8dee5;
-  --r-vdo: #f5993f; --r-stoneridge: #6a95e0; --r-wortach: #b07ce0; --r-maha: #ee5a5a; --r-tekson: #3fc0b6; --r-none: #7d8894;
+  --r-vdo: #f5993f; --r-stoneridge: #6a95e0; --r-wortach: #4cc27e; --r-maha: #ee5a5a; --r-tekson: #38bdf8; --r-none: #7d8894;
   --ok: #3cc27a; --warn: #f0b04a; --bad: #ef6a5e; --shadow: 0 1px 3px #0008, 0 4px 14px #0006; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #11161c; --panel: #19202a; --fg: #e6ebf0; --muted: #9aa7b5; --line: #2a3441; --line-strong: #5d6b7a; --soft: #1f2833;
-  --accent: #4fb8bf; --accent-fg: #07292b; --accent-soft: #4fb8bf22;
+  --accent: #52c487; --accent-fg: #062a15; --accent-soft: #52c48722;
   --st-cliente: #3cc27a; --st-potencial: #6b9cf0; --st-competencia: #ef6a5e; --st-descartado: #7d8894; --st-none: #d8dee5;
-  --r-vdo: #f5993f; --r-stoneridge: #6a95e0; --r-wortach: #b07ce0; --r-maha: #ee5a5a; --r-tekson: #3fc0b6; --r-none: #7d8894;
+  --r-vdo: #f5993f; --r-stoneridge: #6a95e0; --r-wortach: #4cc27e; --r-maha: #ee5a5a; --r-tekson: #38bdf8; --r-none: #7d8894;
   --ok: #3cc27a; --warn: #f0b04a; --bad: #ef6a5e; --shadow: 0 1px 3px #0008, 0 4px 14px #0006; color-scheme: dark }
 
 * { box-sizing: border-box; }
@@ -57,14 +57,16 @@ input[type=color] { padding: 2px; width: 44px; }
 .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 16px; white-space: nowrap; }
 .brand img { border-radius: 7px; }
 .marca { display: inline-flex; align-items: center; gap: 10px; line-height: 1; }
-.marca-logo { height: 30px; width: auto; max-width: 120px; object-fit: contain; border-radius: 0 !important; }
+.marca-logo { height: 30px; width: auto; object-fit: contain; border-radius: 0 !important; display: block; }
+.marca-completo { width: min(300px, 80%); height: auto; display: block; margin: 0 auto; }
+.marca-completo.oscuro { display: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .marca-completo.claro { display: none; } :root:not([data-theme="light"]) .marca-completo.oscuro { display: block; } }
+:root[data-theme="dark"] .marca-completo.claro { display: none; } :root[data-theme="dark"] .marca-completo.oscuro { display: block; }
+.marca-workshops { display: block; text-align: center; color: var(--accent); font-weight: 600; letter-spacing: .32em; font-size: 15px; margin-top: 10px; padding-left: .32em; }
 .marca-txt { display: inline-flex; align-items: baseline; gap: 6px; letter-spacing: .06em; }
 .marca-txt b { font-weight: 700; font-size: 16px; color: var(--fg); }
 .marca-txt span { font-weight: 500; font-size: 13px; color: var(--accent); }
-.marca.grande { flex-direction: column; gap: 14px; }
-.marca.grande .marca-logo { height: 64px; max-width: 220px; }
-.marca.grande .marca-txt b { font-size: 26px; }
-.marca.grande .marca-txt span { font-size: 18px; }
+.marca.grande { display: block; }
 .login-card h1 { text-align: center; }
 .login-sub { margin: -6px 0 2px; text-align: center; color: var(--muted); font-size: 13.5px; }
 .chip.primario { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }

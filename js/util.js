@@ -62,7 +62,7 @@ export const PRECISION = {
 };
 export const TIPOS_VISITA = { visita: 'Visita', llamada: 'Llamada', email: 'Email', otro: 'Otro' };
 export const TIPOS_EQUIPO = ['Banco de pruebas', 'Equipo de calibración', 'Descargador de datos', 'Software de gestión', 'Tacógrafo', 'Limitador de velocidad', 'Otro'];
-export const COLORES = ['#0d6b72', '#c2410c', '#6d28d9', '#15803d', '#b91c1c', '#1d4ed8', '#a16207', '#be185d', '#0e7490', '#4d7c0f', '#7c2d12', '#334155'];
+export const COLORES = ['#1f7f4a', '#c2410c', '#6d28d9', '#15803d', '#b91c1c', '#1d4ed8', '#a16207', '#be185d', '#0e7490', '#4d7c0f', '#7c2d12', '#334155'];
 
 // Carga perezosa de scripts externos
 const loaded = {};
@@ -97,5 +97,7 @@ export function confirmBtn(btn, action, label = '¿Seguro?') {
   });
 }
 
-// Marca de la empresa: logo (icons/logo.png, si existe) + WORTACH WORKSHOPS
-export const marcaHtml = (grande = false) => `<span class="marca${grande ? ' grande' : ''}"><img class="marca-logo" src="icons/logo.png" alt="Wortach S.L." onerror="this.remove()"><span class="marca-txt"><b>WORTACH</b><span>WORKSHOPS</span></span></span>`;
+// Marca de la empresa: símbolo + WORTACH WORKSHOPS (cabecera) o logo completo (entrada)
+export const marcaHtml = (grande = false) => grande
+  ? `<span class="marca grande"><img class="marca-completo claro" src="icons/logo.png" alt="Wortach, el mundo del tacógrafo"><img class="marca-completo oscuro" src="icons/logo-oscuro.png" alt="Wortach, el mundo del tacógrafo"><span class="marca-workshops">WORKSHOPS</span></span>`
+  : `<span class="marca"><img class="marca-logo" src="icons/simbolo.png" alt="" width="27" height="30"><span class="marca-txt"><b>WORTACH</b><span>WORKSHOPS</span></span></span>`;

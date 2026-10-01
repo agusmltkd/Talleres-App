@@ -83,7 +83,7 @@ async function supabaseApi() {
 // ------------------------------------------------------------------
 const DEMO_KEY = 'tacografo-demo-v1';
 const DEMO_USERS = [
-  { id: 'demo-admin', email: 'direccion@ejemplo.com', nombre: 'Dirección (demo)', rol: 'admin', color: '#0d6b72', activo: true },
+  { id: 'demo-admin', email: 'direccion@ejemplo.com', nombre: 'Dirección (demo)', rol: 'admin', color: '#1f7f4a', activo: true },
   { id: 'demo-com-1', email: 'comercial.sur@ejemplo.com', nombre: 'Comercial Sur (demo)', rol: 'comercial', color: '#c2410c', activo: true },
   { id: 'demo-com-2', email: 'comercial.norte@ejemplo.com', nombre: 'Comercial Norte (demo)', rol: 'comercial', color: '#6d28d9', activo: true }
 ];
