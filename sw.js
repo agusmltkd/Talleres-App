@@ -1,6 +1,6 @@
 // Service worker: guarda la aplicación para abrirla rápido y sin cobertura.
 // Sube el número de versión cada vez que publiques cambios.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = 'talleres-' + VERSION;
 const BASE = ['./', 'index.html', 'css/app.css', 'manifest.webmanifest', 'icons/icon-192.png',
   'js/main.js', 'js/api.js', 'js/config.js', 'js/util.js', 'js/store.js', 'js/mapa.js', 'js/ficha.js', 'js/formulario.js',

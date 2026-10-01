@@ -215,7 +215,7 @@ create trigger visitas_ultima after insert or update or delete on public.visitas
 
 -- Quien crea un registro queda anotado.
 create or replace function public.anotar_autor() returns trigger
-language plpgsql as $$
+language plpgsql set search_path = public as $$
 begin
   new.creado_por := auth.uid();
   return new;
@@ -292,6 +292,12 @@ create policy visitas_editar on public.visitas for update to authenticated
 drop policy if exists visitas_borrar on public.visitas;
 create policy visitas_borrar on public.visitas for delete to authenticated
   using (public.es_admin() or (public.es_activo() and (comercial_id = auth.uid() or creado_por = auth.uid())));
+
+-- Las funciones de permisos solo las usan usuarios con sesión.
+revoke execute on function public.es_activo(), public.es_admin(), public.puede_editar_taller(text) from public, anon;
+grant execute on function public.es_activo(), public.es_admin(), public.puede_editar_taller(text) to authenticated;
+-- Las funciones de los disparadores no se pueden llamar desde fuera.
+revoke execute on function public.nuevo_usuario(), public.perfiles_guard(), public.talleres_guard(), public.actualizar_ultima_visita(), public.anotar_autor() from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------
 -- Tiempo real: los cambios de un comercial aparecen al momento a los demás
