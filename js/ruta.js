@@ -2,6 +2,7 @@
 import { S, on, emit, getRuta, setRuta } from './store.js';
 import { $, esc, hav, css, toast } from './util.js';
 import { ubicacionActual } from './mapa.js';
+import { ponerFondo } from './fondo.js';
 
 let mini = null, capa = null, salida = null;
 const cp = { tabla: null };
@@ -106,7 +107,7 @@ function render() {
     </div>`;
   if (mini) { mini.remove(); mini = null; }
   mini = L.map('miniMapa', { zoomControl: true });
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mini);
+  ponerFondo(mini);
   capa = L.layerGroup().addTo(mini);
   if (seq.length > 1) L.polyline(seq.map(p => [p.lat, p.lon]), { color: css('--accent'), weight: 4, opacity: 0.85, dashArray: '8 8' }).addTo(capa);
   ps.forEach((t, i) => L.marker([t.lat, t.lon], { icon: L.divIcon({ className: 'stoplabel', html: String(i + 1), iconSize: [26, 26] }) }).addTo(capa).bindTooltip(esc(t.nombre)));

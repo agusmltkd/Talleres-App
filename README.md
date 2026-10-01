@@ -124,7 +124,7 @@ El logo de la cabecera y de la pantalla de entrada se lee de `icons/logo.png`. P
 - **Copias de seguridad**: **Gestión → Datos → Excel → "Exportar todo a Excel"** guarda talleres, visitas, ventas, equipos y contactos. Conviene hacerlo de vez en cuando.
 - **Supabase gratis**: si el proyecto pasa una semana sin ningún uso, Supabase lo pausa. Para evitarlo, la tarea `.github/workflows/mantener-supabase.yml` hace una consulta mínima cada 3 días (se ve en la pestaña **Actions** del repositorio). Si alguna vez falla, GitHub manda un email; se reactiva desde supabase.com con un clic.
 - **Tarjetas de taller**: la fecha de caducidad viene del registro oficial. En el mapa se puede colorear y filtrar por ella, la Agenda lista las que caducan en 90 días y Resultados las cuenta. La dirección puede corregir la fecha a mano en la ficha si el taller ya la ha renovado.
-- **Mapas y direcciones**: se usan los servicios gratuitos de OpenStreetMap, pensados para uso moderado; para un equipo comercial es de sobra.
+- **Mapas**: el fondo del mapa es de OpenFreeMap (gratuito, sin claves y con uso comercial permitido), con tres estilos: Calles, Claro y Oscuro. Si un dispositivo no puede mostrarlo, se usa el mapa clásico de OpenStreetMap. La búsqueda de direcciones usa Nominatim (OpenStreetMap), pensado para uso moderado.
 
 ## Estructura
 

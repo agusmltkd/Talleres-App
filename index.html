@@ -47,6 +47,7 @@
           <button class="chip" data-vista-mapa="ic">Canarias</button>
           <button class="chip" data-vista-mapa="bal">Baleares</button>
           <span class="chip"><label for="colorModo">Color</label><select id="colorModo"><option value="estado">Estado</option><option value="red">Red de marca</option><option value="comercial">Comercial</option><option value="tarjeta">Tarjeta de taller</option></select></span>
+          <span class="chip"><label for="estiloMapa">Mapa</label><select id="estiloMapa"></select></span>
           <span class="chip"><label for="capaProv">Provincias</label><select id="capaProv"><option value="">No</option><option value="total">Talleres</option><option value="cliente">Clientes</option><option value="competencia">Competencia</option><option value="libres">Sin comercial</option><option value="hueco">Sin clientes</option></select></span>
         </div>
         <div class="float bl"><div class="legend" id="leyenda"></div></div>
@@ -56,9 +57,9 @@
         <div class="searchrow"><input class="search" id="fQ" type="search" placeholder="Buscar taller, población, CIF o teléfono" aria-label="Buscar"><button class="btn" id="togFiltros" aria-expanded="false" aria-controls="masFiltros">Filtros</button></div>
         <div class="mas-filtros" id="masFiltros">
         <div class="grid2 tight">
+          <select id="fCom" aria-label="Comercial" class="solo-admin"></select>
           <select id="fZona" aria-label="Comunidad o país"></select>
           <select id="fProv" aria-label="Provincia"></select>
-          <select id="fCom" aria-label="Comercial" class="solo-admin"></select>
           <select id="fOrigen" aria-label="Origen"><option value="">Todos los orígenes</option><option value="reg">Registro oficial España</option><option value="ipq">Registro oficial Portugal</option><option value="kmz">Recopilatorio 2025</option><option value="manual">Añadidos por el equipo</option><option value="import">Importados de Excel</option></select>
         </div>
         <div class="chips" id="fEstados" aria-label="Estado"></div>

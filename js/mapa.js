@@ -1,6 +1,7 @@
 // Vista de mapa: capa de talleres, filtros, lista y «cerca de mí»
 import { S, on, emit, esAdmin, nombreDe, colorDe, comerciales, getRuta } from './store.js';
 import { asignarTalleres } from './asignar.js';
+import { ponerFondo, ESTILOS, estiloActual, guardarEstilo } from './fondo.js';
 import { $, $$, esc, norm, css, hav, ESTADOS, REDES, TARJETA, estadoInfo, estadoTarjeta, redBadges, fmtFechaCorta, diasDesde, iniciales, debounce, toast } from './util.js';
 
 export let map = null;
@@ -41,7 +42,9 @@ const radio = () => { const z = map.getZoom(); return z <= 6 ? 4.5 : z <= 8 ? 6 
 export function iniciarMapa() {
   map = L.map('map', { preferCanvas: true, minZoom: 4, maxZoom: 18, zoomControl: false });
   L.control.zoom({ position: 'bottomright' }).addTo(map);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map);
+  const est = estiloActual();
+  $('#estiloMapa').innerHTML = ESTILOS.map(e => `<option value="${e.k}"${e.k === est ? ' selected' : ''}>${e.label}</option>`).join('');
+  ponerFondo(map, est).then(cambiar => $('#estiloMapa').addEventListener('change', e => { guardarEstilo(e.target.value); cambiar(e.target.value); }));
   map.fitBounds([[35.9, -9.4], [43.8, 3.4]]);
   markerLayer = L.layerGroup().addTo(map);
   selLayer = L.layerGroup().addTo(map);
