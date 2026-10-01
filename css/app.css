@@ -344,3 +344,12 @@ svg.chart .val { fill: var(--fg); font-size: 11.5px; font-weight: 600; font-fami
 .progress { height: 8px; background: var(--soft); border-radius: 4px; overflow: hidden; }
 .progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
 
+
+.chip-com.activo { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow); }
+.chip-com.activo select { color: var(--accent); }
+@media (max-width: 860px) {
+  /* En el móvil los botones del mapa van en una sola fila que se desliza con el dedo */
+  .float.tl { flex-wrap: nowrap; overflow-x: auto; right: 0; padding: 0 10px 6px 0; pointer-events: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .float.tl::-webkit-scrollbar { display: none; }
+  .float.tl > * { flex: none; }
+}

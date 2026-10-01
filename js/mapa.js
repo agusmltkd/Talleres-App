@@ -83,7 +83,10 @@ function construirFiltros() {
   $('#fQ').addEventListener('input', debounce(e => { F.q = norm(e.target.value).trim(); refrescar(); }, 150));
   $('#fZona').addEventListener('change', e => { F.zona = e.target.value; F.prov = ''; rellenarSelects(); refrescar(); });
   $('#fProv').addEventListener('change', e => { F.prov = e.target.value; refrescar(); });
-  $('#fCom').addEventListener('change', e => { F.com = e.target.value; refrescar(); });
+  const ponCom = v => { F.com = v; $('#fCom').value = v; $('#fComTop').value = v; $('.chip-com').classList.toggle('activo', !!v); refrescar();
+    if (v && visibles.length) map.fitBounds(L.latLngBounds(visibles.map(t => [t.lat, t.lon])).pad(0.15), { maxZoom: 11 }); };
+  $('#fCom').addEventListener('change', e => ponCom(e.target.value));
+  $('#fComTop').addEventListener('change', e => ponCom(e.target.value));
   $('#fOrigen').addEventListener('change', e => { F.origen = e.target.value; refrescar(); });
   $('#fSinVisita').addEventListener('change', e => { F.sinVisita = e.target.checked; refrescar(); });
   $('#fTarjeta').addEventListener('change', e => { F.tarjeta = e.target.checked; if (F.tarjeta && colorModo === 'estado') { colorModo = 'tarjeta'; $('#colorModo').value = 'tarjeta'; leyenda(); } refrescar(); });
@@ -109,7 +112,8 @@ export function rellenarSelects() {
   const coms = comerciales();
   $('#fCom').innerHTML = `<option value="">Todos los comerciales</option><option value="__yo">Mis talleres</option><option value="__libre">Sin comercial</option>` +
     coms.map(p => `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('');
-  $('#fCom').value = F.com;
+  $('#fComTop').innerHTML = $('#fCom').innerHTML.replace('Todos los comerciales', 'Todos');
+  $('#fCom').value = F.com; $('#fComTop').value = F.com; $('.chip-com').classList.toggle('activo', !!F.com);
 }
 
 let encuadrado = false;
