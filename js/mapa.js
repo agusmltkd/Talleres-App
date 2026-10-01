@@ -58,12 +58,17 @@ export function iniciarMapa() {
     map.fitBounds(v);
   }));
   $('#btnCerca').addEventListener('click', cercaDeMi);
-  $('#colorModo').addEventListener('change', e => { colorModo = e.target.value; pintarMarcadores(); leyenda(); });
+  $('#colorModo').addEventListener('change', e => { colorModo = e.target.value; try { localStorage.setItem('mapa-color:' + S.yo.id, colorModo); } catch (err) {} pintarMarcadores(); leyenda(); });
   $('#capaProv').addEventListener('change', pintarProvincias);
   if (!esAdmin()) {
     // El comercial solo trabaja con sus talleres: fuera las opciones de reparto
     $$('#colorModo option[value="comercial"], #capaProv option[value="libres"]').forEach(o => o.remove());
   }
+  // Color de los puntos al abrir: dirección ve los talleres por comercial; se recuerda la última elección
+  let guardado = null; try { guardado = localStorage.getItem('mapa-color:' + S.yo.id); } catch (err) {}
+  const opciones = $$('#colorModo option').map(o => o.value);
+  colorModo = opciones.includes(guardado) && guardado !== 'tarjeta' ? guardado : (esAdmin() ? 'comercial' : 'estado');
+  $('#colorModo').value = colorModo;
   $('#asignarLista').addEventListener('click', () => {
     const nombre = F.prov ? $('#fProv').selectedOptions[0]?.textContent : F.zona;
     asignarTalleres(visibles, nombre ? `Asignar ${nombre}` : 'Asignar los talleres de la lista');
