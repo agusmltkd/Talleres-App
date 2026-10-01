@@ -1,10 +1,10 @@
 // Vista de mapa: capa de talleres, filtros, lista y «cerca de mí»
 import { S, on, emit, esAdmin, nombreDe, colorDe, comerciales, getRuta } from './store.js';
 import { asignarTalleres } from './asignar.js';
-import { $, $$, esc, norm, css, hav, ESTADOS, REDES, estadoInfo, redBadges, fmtFechaCorta, diasDesde, iniciales, debounce, toast } from './util.js';
+import { $, $$, esc, norm, css, hav, ESTADOS, REDES, TARJETA, estadoInfo, estadoTarjeta, redBadges, fmtFechaCorta, diasDesde, iniciales, debounce, toast } from './util.js';
 
 export let map = null;
-const F = { q: '', zona: '', prov: '', com: '', origen: '', estados: new Set(), redes: new Set(), sinVisita: false };
+const F = { q: '', zona: '', prov: '', com: '', origen: '', estados: new Set(), redes: new Set(), sinVisita: false, tarjeta: false };
 let colorModo = 'estado';
 let cerca = null; // {lat, lon}
 let visibles = [];
@@ -25,6 +25,7 @@ export function filtrar(t) {
   if (F.estados.size && !F.estados.has(t.estado || '_')) return false;
   if (F.redes.size && !(t.redes || []).some(r => F.redes.has(r)) && !(F.redes.has('_') && !(t.redes || []).length)) return false;
   if (F.sinVisita) { const d = diasDesde(t.ultima_visita); if (d !== null && d < 90) return false; }
+  if (F.tarjeta && !['caducada', 'd30', 'd90'].includes(estadoTarjeta(t).k)) return false;
   return true;
 }
 export const talleresVisibles = () => visibles;
@@ -32,6 +33,7 @@ export const talleresVisibles = () => visibles;
 function colorDeTaller(t) {
   if (colorModo === 'red') { const r = (t.redes || [])[0]; return css(r ? (REDES.find(x => x.k === r)?.v || '--r-none') : '--r-none'); }
   if (colorModo === 'comercial') return colorDe(t.comercial_id) || css('--st-none');
+  if (colorModo === 'tarjeta') return css(TARJETA.find(x => x.k === estadoTarjeta(t).k).v);
   return css(estadoInfo(t.estado).v);
 }
 const radio = () => { const z = map.getZoom(); return z <= 6 ? 4.5 : z <= 8 ? 6 : z <= 11 ? 7.5 : 9; };
@@ -81,8 +83,9 @@ function construirFiltros() {
   $('#fCom').addEventListener('change', e => { F.com = e.target.value; refrescar(); });
   $('#fOrigen').addEventListener('change', e => { F.origen = e.target.value; refrescar(); });
   $('#fSinVisita').addEventListener('change', e => { F.sinVisita = e.target.checked; refrescar(); });
+  $('#fTarjeta').addEventListener('change', e => { F.tarjeta = e.target.checked; if (F.tarjeta && colorModo === 'estado') { colorModo = 'tarjeta'; $('#colorModo').value = 'tarjeta'; leyenda(); } refrescar(); });
   $('#fLimpiar').addEventListener('click', () => {
-    Object.assign(F, { q: '', zona: '', prov: '', com: '', origen: '', sinVisita: false }); F.estados.clear(); F.redes.clear();
+    Object.assign(F, { q: '', zona: '', prov: '', com: '', origen: '', sinVisita: false, tarjeta: false }); F.estados.clear(); F.redes.clear(); $('#fTarjeta').checked = false;
     $('#fQ').value = ''; $('#fSinVisita').checked = false; $$('.tog', $('#filtros')).forEach(b => b.setAttribute('aria-pressed', 'false'));
     rellenarSelects(); refrescar();
   });
@@ -114,7 +117,7 @@ export function refrescar() {
   if (!encuadrado && !esAdmin() && visibles.length) { encuadrado = true; map.fitBounds(L.latLngBounds(visibles.map(t => [t.lat, t.lon])).pad(0.15), { maxZoom: 11 }); }
   pintarMarcadores(); renderLista(); pintarProvincias();
   $('#nVisibles').textContent = visibles.length.toLocaleString('es-ES');
-  const n = [F.zona, F.prov, F.com, F.origen, F.sinVisita].filter(Boolean).length + F.estados.size + F.redes.size;
+  const n = [F.zona, F.prov, F.com, F.origen, F.sinVisita, F.tarjeta].filter(Boolean).length + F.estados.size + F.redes.size;
   $('#togFiltros').textContent = n ? `Filtros (${n})` : 'Filtros';
   emit('filtros', visibles);
 }
@@ -152,12 +155,18 @@ function renderLista() {
       <span class="dot" style="background:var(${e.v})"></span>
       <span class="nm">${esc(t.nombre)}</span>
       <span class="rt">${com}<button class="icon" data-ruta="${esc(t.id)}" aria-label="${enRuta ? 'Quitar de la ruta' : 'Añadir a la ruta'}" title="${enRuta ? 'Quitar de la ruta' : 'Añadir a la ruta'}">${enRuta ? '✓' : '+'}</button></span>
-      <span class="sub">${d != null ? `<b>${d < 10 ? d.toFixed(1) : Math.round(d)} km</b> · ` : ''}${esc(t.poblacion || '')}${t.provincia && t.provincia !== t.poblacion ? ' · ' + esc(t.provincia) : ''}${t.ultima_visita ? ' · visitado ' + fmtFechaCorta(t.ultima_visita) : ''} ${redBadges(t.redes)}${t.origen === 'kmz' ? ' <span class="badge src">No figura en el registro</span>' : ''}</span>
+      <span class="sub">${d != null ? `<b>${d < 10 ? d.toFixed(1) : Math.round(d)} km</b> · ` : ''}${esc(t.poblacion || '')}${t.provincia && t.provincia !== t.poblacion ? ' · ' + esc(t.provincia) : ''}${t.ultima_visita ? ' · visitado ' + fmtFechaCorta(t.ultima_visita) : ''} ${redBadges(t.redes)}${t.origen === 'kmz' ? ' <span class="badge src">No figura en el registro</span>' : ''}${tjBadge(t)}</span>
     </div>`;
   }).join('') || (S.talleres.size ? '<p class="note pad">Ningún taller cumple estos filtros.</p>'
     : `<p class="note pad">${esAdmin() ? 'Todavía no hay talleres cargados.' : 'Todavía no tienes talleres asignados. Cuando la dirección te asigne una zona, aparecerán aquí y en el mapa. Mientras, puedes añadir talleres tú mismo.'}</p>`);
 }
 
+function tjBadge(t) {
+  const { k, dias } = estadoTarjeta(t);
+  if (k === 'caducada') return ' <span class="badge tjb caducada">Tarjeta caducada</span>';
+  if (k === 'd30' || k === 'd90') return ` <span class="badge tjb">Tarjeta: ${dias} días</span>`;
+  return '';
+}
 function cercaDeMi() {
   if (cerca) { cerca = null; nearLayer.clearLayers(); $('#btnCerca').setAttribute('aria-pressed', 'false'); renderLista(); return; }
   if (!navigator.geolocation) return toast('Este dispositivo no da la ubicación.', 'error');
@@ -213,6 +222,7 @@ function leyenda(max) {
   let h = '';
   if (colorModo === 'estado') h = ESTADOS.map(e => `<div class="row"><span class="sw" style="background:var(${e.v})"></span>${e.label}</div>`).join('');
   else if (colorModo === 'red') h = REDES.map(r => `<div class="row"><span class="sw" style="background:var(${r.v})"></span>${r.label}</div>`).join('') + '<div class="row"><span class="sw" style="background:var(--r-none)"></span>Sin red conocida</div>';
+  else if (colorModo === 'tarjeta') h = TARJETA.map(x => `<div class="row"><span class="sw" style="background:var(${x.v})"></span>${x.label}</div>`).join('');
   else h = comerciales().map(p => `<div class="row"><span class="sw" style="background:${esc(p.color)}"></span>${esc(p.nombre)}</div>`).join('') + '<div class="row"><span class="sw" style="background:var(--st-none)"></span>Sin comercial</div>';
   const modo = $('#capaProv').value;
   if (modo && max) h += `<div class="row" style="margin-top:6px"><span class="grad"></span><span>0 – ${max} por provincia</span></div>`;

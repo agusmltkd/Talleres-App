@@ -1,6 +1,6 @@
 // Panel de resultados
 import { S, on, esAdmin, comerciales } from './store.js';
-import { $, esc, hoy, addDays, fmtEur, fmtNum, diasDesde, ESTADOS } from './util.js';
+import { $, esc, hoy, addDays, fmtEur, fmtNum, diasDesde, ESTADOS, estadoTarjeta } from './util.js';
 
 let periodo = 'mes', quien = null;
 
@@ -38,6 +38,7 @@ function render() {
   const clientes = talleres.filter(t => t.estado === 'cliente');
   const olvidados = clientes.filter(t => { const d = diasDesde(t.ultima_visita); return d == null || d > 90; });
   const coms = comerciales();
+  const tjPronto = talleres.filter(t => ['caducada', 'd30', 'd90'].includes(estadoTarjeta(t).k));
 
   // visitas por comercial en el periodo
   const porCom = coms.map(p => ({ p, n: [...S.visitas.values()].filter(v => v.estado === 'hecha' && enRango(v.fecha) && v.comercial_id === p.id).length }));
@@ -60,6 +61,7 @@ function render() {
       <div class="tile"><span>Conversión</span><b>${conv == null ? '—' : conv + ' %'}</b><small>ganados sobre cerrados</small></div>
       <div class="tile"><span>Clientes</span><b>${fmtNum(clientes.length)}</b><small>de ${fmtNum(talleres.length)} talleres ${sel ? 'asignados' : ''}</small></div>
       <div class="tile ${olvidados.length ? 'warn' : ''}"><span>Clientes sin visitar</span><b>${fmtNum(olvidados.length)}</b><small>hace más de 90 días</small></div>
+      <div class="tile ${tjPronto.length ? 'warn' : ''}"><span>Tarjetas que caducan</span><b>${fmtNum(tjPronto.length)}</b><small>en 90 días · ${fmtNum(tjPronto.filter(t => estadoTarjeta(t).k === 'd30').length)} en 30</small></div>
     </div>
     <div class="charts">
       <section class="panel"><h3 class="ch-t">Ventas ganadas por mes</h3><p class="note">Últimos 12 meses${sel ? '' : ', todo el equipo'}</p>${barrasV(porMes.map(x => ({ l: new Date(x.m + '-15').toLocaleDateString('es-ES', { month: 'short' }), v: x.v, t: `${new Date(x.m + '-15').toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}: ${fmtEur(x.v)}` })), fmtEur)}</section>

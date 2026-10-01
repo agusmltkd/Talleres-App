@@ -6,7 +6,7 @@
   --accent: #1f7f4a; --accent-fg: #ffffff; --accent-soft: #e3f2e9;
   --st-cliente: #1f9d55; --st-potencial: #2f6fde; --st-competencia: #d4453a; --st-descartado: #8b95a1; --st-none: #ffffff;
   --r-vdo: #ef7d16; --r-stoneridge: #1f4e9c; --r-wortach: #268c56; --r-maha: #c62828; --r-tekson: #0891b2; --r-none: #9aa4ae;
-  --ok: #1f9d55; --warn: #b26b00; --bad: #c43b31;
+  --ok: #1f9d55; --warn: #b26b00; --bad: #c43b31; --tj-90: #e3b341;
   --f: "IBM Plex Sans", "Segoe UI", Roboto, Arial, sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
   --shadow: 0 1px 2px #1820281f, 0 4px 14px #18202814;
@@ -18,13 +18,13 @@
   --accent: #52c487; --accent-fg: #062a15; --accent-soft: #52c48722;
   --st-cliente: #3cc27a; --st-potencial: #6b9cf0; --st-competencia: #ef6a5e; --st-descartado: #7d8894; --st-none: #d8dee5;
   --r-vdo: #f5993f; --r-stoneridge: #6a95e0; --r-wortach: #4cc27e; --r-maha: #ee5a5a; --r-tekson: #38bdf8; --r-none: #7d8894;
-  --ok: #3cc27a; --warn: #f0b04a; --bad: #ef6a5e; --shadow: 0 1px 3px #0008, 0 4px 14px #0006; color-scheme: dark } }
+  --ok: #3cc27a; --warn: #f0b04a; --bad: #ef6a5e; --tj-90: #f3d36b; --shadow: 0 1px 3px #0008, 0 4px 14px #0006; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #11161c; --panel: #19202a; --fg: #e6ebf0; --muted: #9aa7b5; --line: #2a3441; --line-strong: #5d6b7a; --soft: #1f2833;
   --accent: #52c487; --accent-fg: #062a15; --accent-soft: #52c48722;
   --st-cliente: #3cc27a; --st-potencial: #6b9cf0; --st-competencia: #ef6a5e; --st-descartado: #7d8894; --st-none: #d8dee5;
   --r-vdo: #f5993f; --r-stoneridge: #6a95e0; --r-wortach: #4cc27e; --r-maha: #ee5a5a; --r-tekson: #38bdf8; --r-none: #7d8894;
-  --ok: #3cc27a; --warn: #f0b04a; --bad: #ef6a5e; --shadow: 0 1px 3px #0008, 0 4px 14px #0006; color-scheme: dark }
+  --ok: #3cc27a; --warn: #f0b04a; --bad: #ef6a5e; --tj-90: #f3d36b; --shadow: 0 1px 3px #0008, 0 4px 14px #0006; color-scheme: dark }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -164,6 +164,7 @@ main { min-height: 0; position: relative; }
 .tog { height: 27px; padding: 0 9px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
 .tog i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid #0004; }
 .tog[aria-pressed="true"] { border-color: var(--fg); background: var(--soft); font-weight: 600; }
+.chks { display: flex; flex-wrap: wrap; gap: 4px 16px; }
 .row-between { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 .list-head { border-top: 1px solid var(--line); padding-top: 8px; }
 .chk { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px; }
@@ -228,6 +229,11 @@ body.colocando .ficha { display: none; }
 .kv dt { color: var(--muted); } .kv dd { margin: 0; overflow-wrap: anywhere; }
 .aviso { font-size: 13px; background: color-mix(in srgb, var(--warn) 12%, var(--panel)); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); border-radius: 9px; padding: 9px 11px; margin: 0; display: grid; gap: 6px; }
 .aviso p { margin: 0; }
+.aviso.tj-caducada { background: color-mix(in srgb, var(--bad) 12%, var(--panel)); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
+.pill.tj { background: color-mix(in srgb, var(--warn) 18%, var(--panel)); color: var(--fg); }
+.pill.tj.caducada { background: color-mix(in srgb, var(--bad) 20%, var(--panel)); }
+.badge.tjb { background: var(--warn); }
+.badge.tjb.caducada { background: var(--bad); }
 .cards { display: grid; gap: 8px; }
 .card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; }
 .card-h { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }

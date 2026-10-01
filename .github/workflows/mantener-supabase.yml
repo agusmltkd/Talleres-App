@@ -1,0 +1,36 @@
+# Supabase pausa los proyectos gratuitos tras 7 días sin actividad.
+# Esta tarea hace una consulta mínima cada 3 días para que no ocurra.
+name: Mantener Supabase activo
+
+on:
+  schedule:
+    - cron: '17 6 */3 * *'   # cada 3 días, 06:17 UTC
+  workflow_dispatch:          # y a mano desde la pestaña Actions
+
+permissions:
+  contents: read
+  actions: write              # para reactivarse a sí misma (GitHub desactiva tareas programadas tras 60 días sin cambios en el repositorio)
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Consulta mínima a la base de datos
+        run: |
+          # Usa la dirección y la clave pública que ya están en js/config.js
+          URL=$(grep -oP "SUPABASE_URL = '\K[^']+" js/config.js)
+          KEY=$(grep -oP "SUPABASE_ANON_KEY = '\K[^']+" js/config.js)
+          for i in 1 2 3; do
+            R=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$URL/rest/v1/rpc/ping" -H "apikey: $KEY" -H "Content-Type: application/json" -d '{}')
+            echo "Respuesta: $R"
+            [ "$R" = "200" ] && exit 0
+            sleep 20
+          done
+          echo "::error::Supabase no responde. Puede que el proyecto esté pausado: reactívalo desde supabase.com."
+          exit 1
+      - name: Evitar que GitHub desactive esta tarea
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/mantener-supabase.yml/enable" || true

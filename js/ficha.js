@@ -1,6 +1,6 @@
 // Ficha de un taller: resumen, contactos, visitas, ventas y equipos
 import { S, on, emit, esAdmin, puedeEditar, nombreDe, colorDe, comerciales, guardar, crear, borrar, getRuta, setRuta } from './store.js';
-import { $, $$, esc, ESTADOS, estadoInfo, redBadges, ORIGEN, PRECISION, TIPOS_VISITA, TIPOS_EQUIPO, fmtFecha, fmtFechaCorta, fmtEur, hoy, addDays, iniciales, toast, confirmBtn, diasDesde } from './util.js';
+import { $, $$, esc, ESTADOS, estadoInfo, redBadges, ORIGEN, PRECISION, TIPOS_VISITA, TIPOS_EQUIPO, fmtFecha, fmtFechaCorta, fmtEur, hoy, addDays, iniciales, toast, confirmBtn, diasDesde, estadoTarjeta, textoTarjeta } from './util.js';
 import { formulario } from './formulario.js';
 import { volarA, colocarAMano } from './mapa.js';
 import { buscarDireccion } from './geocodificar.js';
@@ -70,6 +70,8 @@ function resumen(body, t) {
   const dias = diasDesde(t.ultima_visita);
   body.innerHTML = `
     <div class="chips">${redBadges(t.redes) || '<span class="note">Sin red de marca conocida</span>'}${t.origen === 'kmz' ? ' <span class="badge src">No figura en el registro</span>' : ''}</div>
+    ${(() => { const k = estadoTarjeta(t).k; if (!['caducada', 'd30', 'd90'].includes(k)) return '';
+      return `<p class="aviso ${k === 'caducada' ? 'tj-caducada' : ''}"><span><b>Tarjeta de taller:</b> según el registro oficial, ${esc(textoTarjeta(t))}. ${k === 'caducada' ? 'Comprueba si la ha renovado.' : 'Buen momento para contactar.'}</span></p>`; })()}
     ${!edit ? `<p class="aviso">Este taller es de ${esc(nombreDe(t.comercial_id) || 'otro comercial')}. Puedes consultarlo, pero solo lo edita su comercial o la dirección.</p>` : ''}
     <div class="kpis3">
       <div><span>Última visita</span><b>${t.ultima_visita ? fmtFechaCorta(t.ultima_visita) : '—'}</b>${dias != null ? `<small>hace ${dias} días</small>` : '<small>nunca</small>'}</div>
@@ -100,12 +102,18 @@ function resumen(body, t) {
     <dl class="kv">
       ${t.cif ? `<dt>CIF/NIF</dt><dd>${esc(t.cif)}</dd>` : ''}
       <dt>Origen</dt><dd>${esc(ORIGEN[t.origen] || t.origen)}${t.origen === 'reg' && S.fechaRegistro ? ` a ${esc(S.fechaRegistro)}` : ''}</dd>
-      ${t.tarjetas ? `<dt>Tarjetas de taller</dt><dd>${t.tarjetas}${t.tarjeta_hasta ? `, la última válida hasta el ${fmtFecha(t.tarjeta_hasta)}` : ''}</dd>` : ''}
+      ${t.tarjetas || t.tarjeta_hasta || admin ? `<dt>Tarjetas de taller</dt><dd>${t.tarjetas ? t.tarjetas + (t.tarjeta_hasta ? ', la última válida hasta el ' : '') : (t.tarjeta_hasta ? 'Válida hasta el ' : 'Sin dato')}${t.tarjeta_hasta ? fmtFecha(t.tarjeta_hasta) : ''}${admin ? ' <button class="linklike" id="tjEdit">Cambiar fecha</button>' : ''}</dd>` : ''}
       ${t.actualizado ? `<dt>Último cambio</dt><dd>${new Date(t.actualizado).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}${t.actualizado_por && nombreDe(t.actualizado_por) ? ' por ' + esc(nombreDe(t.actualizado_por)) : ''}</dd>` : ''}
     </dl>
     ${admin ? '<div class="btns"><button class="btn danger" id="borrarTaller">Eliminar taller</button></div>' : ''}`;
 
   $$('[data-estado]', body).forEach(b => b.addEventListener('click', () => guardar('talleres', t.id, { estado: b.dataset.estado })));
+  $('#tjEdit', body)?.addEventListener('click', () => formulario({
+    titulo: 'Fecha de la tarjeta de taller', textoGuardar: 'Guardar',
+    campos: [{ k: 'tarjeta_hasta', label: 'Válida hasta', type: 'date' }], valores: { tarjeta_hasta: t.tarjeta_hasta || '' },
+    extra: '<p class="note">Útil si el taller te dice que ya la ha renovado. Al cargar un registro oficial nuevo se volverá a tomar la fecha del registro.</p>',
+    alGuardar: async d => { await guardar('talleres', t.id, { tarjeta_hasta: d.tarjeta_hasta || null }); toast('Fecha guardada'); }
+  }));
   $('#fCom2', body)?.addEventListener('change', e => guardar('talleres', t.id, { comercial_id: e.target.value || null }).then(() => toast('Comercial asignado')));
   $('#datosForm', body).addEventListener('submit', async e => {
     e.preventDefault(); const f = e.target;

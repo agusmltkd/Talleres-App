@@ -1,6 +1,6 @@
 // Agenda: calendario de visitas y revisiones de equipos
 import { S, on, emit, esAdmin, nombreDe, colorDe, comerciales, getRuta, setRuta } from './store.js';
-import { $, $$, esc, hoy, addDays, fmtDia, fmtFechaCorta, TIPOS_VISITA, norm, modal } from './util.js';
+import { $, $$, esc, hoy, addDays, fmtDia, fmtFechaCorta, TIPOS_VISITA, norm, modal, estadoTarjeta, diasHasta } from './util.js';
 import { formVisita } from './ficha.js';
 
 let mes = hoy().slice(0, 7), dia = hoy(), quien = null;
@@ -57,6 +57,9 @@ function render() {
   const revDia = rev.filter(e => e.proxima_revision === dia);
   const atrasadas = vis.filter(v => v.estado === 'planificada' && v.fecha < h).sort((a, b) => a.fecha.localeCompare(b.fecha));
   const proximas = vis.filter(v => v.estado === 'planificada' && v.fecha >= h && v.fecha <= addDays(h, 14)).sort((a, b) => (a.fecha + (a.hora || '')).localeCompare(b.fecha + (b.hora || '')));
+  const q = miVista();
+  const tarjetas = [...S.talleres.values()].filter(t => (!q || t.comercial_id === q) && ['caducada', 'd30', 'd90'].includes(estadoTarjeta(t).k))
+    .sort((a, b) => a.tarjeta_hasta.localeCompare(b.tarjeta_hasta));
   const revProx = rev.filter(e => e.proxima_revision <= addDays(h, 60)).sort((a, b) => a.proxima_revision.localeCompare(b.proxima_revision));
   const opciones = `<option value="">Todo el equipo</option>` + comerciales().map(p => `<option value="${esc(p.id)}"${p.id === miVista() ? ' selected' : ''}>${esc(p.id === S.yo.id ? 'Solo las mías' : p.nombre)}</option>`).join('');
   $('#v-agenda').innerHTML = `
@@ -79,6 +82,7 @@ function render() {
       <section class="panel">
         ${atrasadas.length ? `<h2 class="cap warn">Visitas planificadas sin cerrar (${atrasadas.length})</h2><div class="agenda-list">${atrasadas.map(item).join('')}</div>` : ''}
         <h2 class="cap">Próximas dos semanas</h2><div class="agenda-list">${proximas.map(item).join('') || '<p class="note">No hay visitas planificadas.</p>'}</div>
+        <h2 class="cap">Tarjetas de taller que caducan (próximos 90 días)</h2><div class="agenda-list">${tarjetas.slice(0, 40).map(itemTarjeta).join('') || '<p class="note">Ningún taller caduca pronto.</p>'}${tarjetas.length > 40 ? `<p class="note">Y ${tarjetas.length - 40} más: filtra el mapa por «Tarjeta caduca en 90 días».</p>` : ''}</div>
         <h2 class="cap">Revisiones de equipos (próximos 60 días)</h2><div class="agenda-list">${revProx.map(itemRev).join('') || '<p class="note">Sin revisiones próximas.</p>'}</div>
       </section>
     </div>`;
@@ -102,6 +106,12 @@ function itemRev(e) {
     <div class="note">${esc(e.tipo)}${e.marca ? ' · ' + esc(e.marca) : ''} · ${esc(t.poblacion || '')}</div></div>`;
 }
 
+function itemTarjeta(t) {
+  const { k } = estadoTarjeta(t), d = diasHasta(t.tarjeta_hasta);
+  return `<div class="ag-item"><div><b>${fmtFechaCorta(t.tarjeta_hasta)}</b> <span class="pill tj ${k}">${k === 'caducada' ? 'Caducada' : d === 0 ? 'Caduca hoy' : `En ${d} días`}</span></div>
+    <button class="linklike" data-taller="${esc(t.id)}" data-tab="resumen">${esc(t.nombre)}</button>
+    <div class="note">${esc(t.poblacion || '')}${t.provincia && t.provincia !== t.poblacion ? ' · ' + esc(t.provincia) : ''}${t.estado ? ' · ' + esc({ cliente: 'Cliente', potencial: 'Potencial', competencia: 'Competencia', descartado: 'Descartado' }[t.estado] || '') : ''}</div></div>`;
+}
 function nuevaCita() {
   const opciones = [...S.talleres.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
   const { el, close } = modal(`<div class="modal-head"><h3>Planificar visita</h3><button class="icon" data-close aria-label="Cerrar">×</button></div>

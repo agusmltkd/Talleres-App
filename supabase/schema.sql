@@ -301,6 +301,12 @@ grant execute on function public.es_activo(), public.es_admin(), public.puede_ed
 -- Las funciones de los disparadores no se pueden llamar desde fuera.
 revoke execute on function public.nuevo_usuario(), public.perfiles_guard(), public.talleres_guard(), public.actualizar_ultima_visita(), public.anotar_autor() from public, anon, authenticated;
 
+-- Función mínima para la tarea programada que mantiene el proyecto activo (no toca datos).
+create or replace function public.ping() returns text
+language sql stable security invoker set search_path = public as $$ select 'ok'::text $$;
+revoke execute on function public.ping() from public;
+grant execute on function public.ping() to anon, authenticated;
+
 -- ---------------------------------------------------------------------
 -- Tiempo real: los cambios de un comercial aparecen al momento a los demás
 -- ---------------------------------------------------------------------

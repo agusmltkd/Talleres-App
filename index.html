@@ -46,7 +46,7 @@
           <button class="chip" data-vista-mapa="pt">Portugal</button>
           <button class="chip" data-vista-mapa="ic">Canarias</button>
           <button class="chip" data-vista-mapa="bal">Baleares</button>
-          <span class="chip"><label for="colorModo">Color</label><select id="colorModo"><option value="estado">Estado</option><option value="red">Red de marca</option><option value="comercial">Comercial</option></select></span>
+          <span class="chip"><label for="colorModo">Color</label><select id="colorModo"><option value="estado">Estado</option><option value="red">Red de marca</option><option value="comercial">Comercial</option><option value="tarjeta">Tarjeta de taller</option></select></span>
           <span class="chip"><label for="capaProv">Provincias</label><select id="capaProv"><option value="">No</option><option value="total">Talleres</option><option value="cliente">Clientes</option><option value="competencia">Competencia</option><option value="libres">Sin comercial</option><option value="hueco">Sin clientes</option></select></span>
         </div>
         <div class="float bl"><div class="legend" id="leyenda"></div></div>
@@ -63,7 +63,7 @@
         </div>
         <div class="chips" id="fEstados" aria-label="Estado"></div>
         <div class="chips" id="fRedes" aria-label="Red de marca"></div>
-        <div class="row-between"><label class="note chk"><input type="checkbox" id="fSinVisita"> Sin visitar en 90 días</label><button class="linklike" id="fLimpiar">Quitar filtros</button></div>
+        <div class="row-between"><span class="chks"><label class="note chk"><input type="checkbox" id="fSinVisita"> Sin visitar en 90 días</label><label class="note chk"><input type="checkbox" id="fTarjeta"> Tarjeta caduca en 90 días</label></span><button class="linklike" id="fLimpiar">Quitar filtros</button></div>
         </div>
         <div class="row-between list-head"><span class="note"><b id="nVisibles">0</b> en el mapa · <span id="nLista"></span></span><span><button class="linklike solo-admin" id="asignarLista">Asignar</button><span class="solo-admin"> · </span><button class="linklike" id="nuevoTaller">Añadir</button> · <button class="linklike" id="exportLista">Excel</button></span></div>
         <div class="list" id="lista"></div>

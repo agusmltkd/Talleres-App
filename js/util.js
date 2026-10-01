@@ -101,3 +101,24 @@ export function confirmBtn(btn, action, label = '¿Seguro?') {
 export const marcaHtml = (grande = false) => grande
   ? `<span class="marca grande"><img class="marca-completo claro" src="icons/logo.png" alt="Wortach, el mundo del tacógrafo"><img class="marca-completo oscuro" src="icons/logo-oscuro.png" alt="Wortach, el mundo del tacógrafo"><span class="marca-workshops">WORKSHOPS</span></span>`
   : `<span class="marca"><img class="marca-logo" src="icons/simbolo.png" alt="" width="27" height="30"><span class="marca-txt"><b>WORTACH</b><span>WORKSHOPS</span></span></span>`;
+
+// Tarjeta de taller (registro oficial): cuántos días le quedan y en qué tramo está
+export const diasHasta = iso => iso ? Math.round((new Date(iso + 'T12:00:00').getTime() - new Date(hoy() + 'T12:00:00').getTime()) / 864e5) : null;
+export const TARJETA = [
+  { k: 'caducada', label: 'Caducada', v: '--bad' },
+  { k: 'd30', label: 'Caduca en 30 días', v: '--warn' },
+  { k: 'd90', label: 'Caduca en 90 días', v: '--tj-90' },
+  { k: 'ok', label: 'En vigor', v: '--st-descartado' },
+  { k: '', label: 'Sin dato', v: '--st-none' }
+];
+export function estadoTarjeta(t) {
+  const d = diasHasta(t?.tarjeta_hasta);
+  if (d == null) return { k: '', dias: null };
+  return { k: d < 0 ? 'caducada' : d <= 30 ? 'd30' : d <= 90 ? 'd90' : 'ok', dias: d };
+}
+export const textoTarjeta = t => {
+  const { k, dias } = estadoTarjeta(t);
+  if (!k) return '';
+  if (k === 'caducada') return `caducó el ${fmtFecha(t.tarjeta_hasta)} (hace ${-dias} ${-dias === 1 ? 'día' : 'días'})`;
+  return `caduca el ${fmtFecha(t.tarjeta_hasta)} (${dias === 0 ? 'hoy' : `en ${dias} ${dias === 1 ? 'día' : 'días'}`})`;
+};
