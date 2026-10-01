@@ -24,7 +24,9 @@ const flush = debounce(() => { const t = [...pendientes]; pendientes.clear(); em
 
 // ---- permisos (la base de datos los comprueba igualmente) ----
 export const esAdmin = () => S.yo?.rol === 'admin';
-export const puedeEditar = t => !!t && (esAdmin() || !t.comercial_id || t.comercial_id === S.yo?.id);
+export const puedeEditar = t => !!t && (esAdmin() || t.comercial_id === S.yo?.id);
+// Un comercial solo ve sus talleres (la base de datos también lo aplica).
+export const visiblePara = t => !!t && (esAdmin() || t.comercial_id === S.yo?.id);
 export const nombreDe = id => S.perfiles.get(id)?.nombre || '';
 export const colorDe = id => S.perfiles.get(id)?.color || '';
 export const comerciales = () => [...S.perfiles.values()].filter(p => p.activo).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
@@ -33,12 +35,19 @@ export async function cargarTodo() {
   const [perfiles, talleres, visitas, ventas, equipos] = await Promise.all(
     ['perfiles', 'talleres', 'visitas', 'ventas', 'equipos'].map(t => S.api.list(t)));
   S.perfiles = new Map(perfiles.map(r => [r.id, r]));
-  S.talleres = new Map(talleres.map(r => [r.id, r]));
-  S.visitas = new Map(visitas.map(r => [r.id, r]));
-  S.ventas = new Map(ventas.map(r => [r.id, r]));
-  S.equipos = new Map(equipos.map(r => [r.id, r]));
+  S.talleres = new Map(talleres.filter(visiblePara).map(r => [r.id, r]));
+  const deMisTalleres = r => esAdmin() || S.talleres.has(r.taller_id) || r.comercial_id === S.yo?.id;
+  S.visitas = new Map(visitas.filter(deMisTalleres).map(r => [r.id, r]));
+  S.ventas = new Map(ventas.filter(deMisTalleres).map(r => [r.id, r]));
+  S.equipos = new Map(equipos.filter(deMisTalleres).map(r => [r.id, r]));
+  ultimaCarga = Date.now();
   emit('cambio', ['perfiles', 'talleres', 'visitas', 'ventas', 'equipos']);
 }
+let ultimaCarga = 0;
+// Al volver a la app tras un rato, se recarga todo (por si la dirección ha reasignado talleres).
+if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && S.yo && Date.now() - ultimaCarga > 60000) cargarTodo().catch(() => {});
+});
 
 export function suscribir() {
   S.api.suscribir((tabla, ev, nuevo, viejo) => {
@@ -48,7 +57,12 @@ export function suscribir() {
     }
     const m = S[tabla]; if (!m) return;
     if (ev === 'DELETE') m.delete(viejo?.id);
-    else if (nuevo?.id) m.set(nuevo.id, { ...(m.get(nuevo.id) || {}), ...nuevo });
+    else if (nuevo?.id) {
+      const r = { ...(m.get(nuevo.id) || {}), ...nuevo };
+      const fuera = tabla === 'talleres' ? !visiblePara(r)
+        : ['visitas', 'ventas', 'equipos'].includes(tabla) && !esAdmin() && !S.talleres.has(r.taller_id) && r.comercial_id !== S.yo?.id;
+      if (fuera) m.delete(r.id); else m.set(r.id, r);
+    }
     if (tabla === 'perfiles' && nuevo?.id === S.yo?.id) S.yo = { ...S.yo, ...nuevo };
     avisar(tabla);
   });

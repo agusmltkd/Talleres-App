@@ -64,8 +64,7 @@ function resumen(body, t) {
   const coms = comerciales();
   let comercialHtml;
   if (admin) comercialHtml = `<select id="fCom2"><option value="">Sin comercial</option>${coms.map(p => `<option value="${esc(p.id)}"${p.id === t.comercial_id ? ' selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select>`;
-  else if (!t.comercial_id) comercialHtml = `<div class="btns"><span class="note">Sin comercial asignado.</span><button class="btn" id="quedar">Quedármelo</button></div>`;
-  else if (t.comercial_id === S.yo.id) comercialHtml = `<div class="btns"><span class="chip-p"><span class="avatar" style="background:${esc(colorDe(t.comercial_id))}">${esc(iniciales(nombreDe(t.comercial_id)))}</span>Tú</span><button class="btn" id="soltar">Dejar libre</button></div>`;
+  else if (t.comercial_id === S.yo.id) comercialHtml = `<span class="chip-p"><span class="avatar" style="background:${esc(colorDe(t.comercial_id))}">${esc(iniciales(nombreDe(t.comercial_id)))}</span>Tú</span>`;
   else comercialHtml = `<span class="chip-p"><span class="avatar" style="background:${esc(colorDe(t.comercial_id))}">${esc(iniciales(nombreDe(t.comercial_id)))}</span>${esc(nombreDe(t.comercial_id))}</span>`;
   const proxVisita = [...S.visitas.values()].filter(v => v.taller_id === t.id && v.estado === 'planificada' && v.fecha >= hoy()).sort((a, b) => a.fecha.localeCompare(b.fecha))[0];
   const dias = diasDesde(t.ultima_visita);
@@ -108,8 +107,6 @@ function resumen(body, t) {
 
   $$('[data-estado]', body).forEach(b => b.addEventListener('click', () => guardar('talleres', t.id, { estado: b.dataset.estado })));
   $('#fCom2', body)?.addEventListener('change', e => guardar('talleres', t.id, { comercial_id: e.target.value || null }).then(() => toast('Comercial asignado')));
-  $('#quedar', body)?.addEventListener('click', () => guardar('talleres', t.id, { comercial_id: S.yo.id }).then(() => toast('Ahora es tuyo')));
-  $('#soltar', body)?.addEventListener('click', () => guardar('talleres', t.id, { comercial_id: null }).then(() => toast('Taller liberado')));
   $('#datosForm', body).addEventListener('submit', async e => {
     e.preventDefault(); const f = e.target;
     await guardar('talleres', t.id, { telefono: f.telefono.value.trim() || null, email: f.email.value.trim() || null, web: f.web.value.trim() || null, notas: f.notas.value.trim() });

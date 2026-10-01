@@ -56,6 +56,30 @@ input[type=color] { padding: 2px; width: 44px; }
 .top { display: flex; align-items: center; gap: 14px; padding: 0 14px; padding-top: env(safe-area-inset-top, 0px); background: var(--panel); border-bottom: 1px solid var(--line); position: relative; z-index: 1100; }
 .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 16px; white-space: nowrap; }
 .brand img { border-radius: 7px; }
+.marca { display: inline-flex; align-items: center; gap: 10px; line-height: 1; }
+.marca-logo { height: 30px; width: auto; max-width: 120px; object-fit: contain; border-radius: 0 !important; }
+.marca-txt { display: inline-flex; align-items: baseline; gap: 6px; letter-spacing: .06em; }
+.marca-txt b { font-weight: 700; font-size: 16px; color: var(--fg); }
+.marca-txt span { font-weight: 500; font-size: 13px; color: var(--accent); }
+.marca.grande { flex-direction: column; gap: 14px; }
+.marca.grande .marca-logo { height: 64px; max-width: 220px; }
+.marca.grande .marca-txt b { font-size: 26px; }
+.marca.grande .marca-txt span { font-size: 18px; }
+.login-card h1 { text-align: center; }
+.login-sub { margin: -6px 0 2px; text-align: center; color: var(--muted); font-size: 13.5px; }
+.chip.primario { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.chip.primario svg { width: 16px; height: 16px; fill: currentColor; margin-left: -3px; }
+.redes-sel { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.redes-sel legend { padding: 0; margin-bottom: 4px; }
+.radios { display: grid; gap: 8px; }
+.radios .chk { flex-wrap: nowrap; gap: 8px; align-items: flex-start; }
+.radios input[type=radio], .redes-sel input[type=checkbox], table.provs input[type=checkbox] { width: 18px; height: 18px; min-height: 0; padding: 0; flex: none; margin: 1px 0 0; }
+.tablewrap.alto { max-height: 460px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
+table.provs th { position: sticky; top: 0; background: var(--panel); z-index: 1; }
+table.provs tr.grupo td { background: var(--bg); }
+table.provs td.ind { padding-left: 18px; }
+table.provs input[type=checkbox] { width: 18px; height: 18px; }
+.chip-p.sm { font-size: 12px; font-weight: 500; gap: 4px; margin: 1px 6px 1px 0; }
 .nav { display: flex; gap: 2px; margin-left: 12px; }
 .nav button { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; position: relative; }
 .nav button svg { width: 19px; height: 19px; fill: currentColor; }
@@ -77,7 +101,7 @@ main { min-height: 0; position: relative; }
 @media (max-width: 860px) {
   #app { grid-template-rows: 50px minmax(0, 1fr) calc(var(--nav-h) + env(safe-area-inset-bottom, 0px)); }
   .top { gap: 8px; }
-  .brand span { font-size: 15px; }
+  .brand .marca-txt b { font-size: 15px; } .brand .marca-txt span { font-size: 12px; }
   .nav { position: fixed; left: 0; right: 0; bottom: 0; margin: 0; height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px)); padding: 4px 4px env(safe-area-inset-bottom, 0px); background: var(--panel); border-top: 1px solid var(--line); display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; z-index: 1200; }
   .nav button { flex-direction: column; gap: 2px; height: 54px; padding: 0; font-size: 11px; border-radius: 10px; }
   .nav button svg { width: 22px; height: 22px; }

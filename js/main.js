@@ -1,7 +1,7 @@
 // Arranque: modo, inicio de sesión, navegación
 import { crearApi, supabaseConfigurado, claveSecreta } from './api.js';
 import { S, on, emit, cargarTodo, suscribir, esAdmin } from './store.js';
-import { $, $$, esc, toast, modal, iniciales } from './util.js';
+import { $, $$, esc, toast, modal, iniciales, marcaHtml } from './util.js';
 import { NOMBRE_APP } from './config.js';
 import { iniciarMapa, refrescar, rellenarSelects, map, talleresVisibles } from './mapa.js';
 import { iniciarFicha } from './ficha.js';
@@ -9,12 +9,11 @@ import { iniciarAgenda, badge } from './agenda.js';
 import { iniciarRuta } from './ruta.js';
 import { iniciarPanel } from './panel.js';
 import { iniciarAdmin, exportarExcel } from './admin.js';
-import { formulario } from './formulario.js';
-import { crear } from './store.js';
+import { nuevoTaller } from './nuevo.js';
 
 const VISTAS = ['mapa', 'agenda', 'ruta', 'panel', 'admin'];
 document.title = NOMBRE_APP;
-$$('.app-nombre').forEach(e => { e.textContent = NOMBRE_APP; });
+$$('.brand').forEach(e => { e.innerHTML = marcaHtml(); });
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
@@ -33,13 +32,13 @@ async function arrancar() {
   await entrarEnApp();
 }
 
-function pantallaError(msg) { $('#cargando').hidden = true; $('#login').hidden = false; $('#login').innerHTML = `<div class="login-card"><h1 class="app-nombre">${esc(NOMBRE_APP)}</h1><p class="aviso">${esc(msg)}</p></div>`; }
+function pantallaError(msg) { $('#cargando').hidden = true; $('#login').hidden = false; $('#login').innerHTML = `<div class="login-card"><h1>${marcaHtml(true)}</h1><p class="aviso">${esc(msg)}</p></div>`; }
 
 function pantallaLogin(modo) {
   $('#cargando').hidden = true; $('#app').hidden = true; $('#login').hidden = false;
   if (modo === 'demo') {
     $('#login').innerHTML = `<div class="login-card">
-      <h1>${esc(NOMBRE_APP)}</h1>
+      <h1>${marcaHtml(true)}</h1><p class="login-sub">Talleres de tacógrafo · acceso del equipo</p>
       <p class="aviso">${supabaseConfigurado ? 'Modo demostración.' : 'Todavía no está conectada a Supabase, así que funciona en modo demostración.'} Los cambios se guardan solo en este navegador.</p>
       <p class="note">Entra como:</p>
       <div class="demo-users">${S.api.usuariosDemo.map(u => `<button class="btn ${u.rol === 'admin' ? 'primary' : ''}" data-u="${esc(u.id)}"><span class="avatar" style="background:${esc(u.color)}">${esc(iniciales(u.nombre))}</span>${esc(u.nombre)}<small>${u.rol === 'admin' ? 'Dirección: ve y asigna todo' : 'Comercial'}</small></button>`).join('')}</div>
@@ -48,7 +47,7 @@ function pantallaLogin(modo) {
     return;
   }
   $('#login').innerHTML = `<form class="login-card" id="loginForm">
-      <h1>${esc(NOMBRE_APP)}</h1>
+      <h1>${marcaHtml(true)}</h1><p class="login-sub">Talleres de tacógrafo · acceso del equipo</p>
       <p class="note">Entra con el email y la contraseña que te ha dado la empresa.</p>
       <label class="field"><span>Email</span><input type="email" name="email" autocomplete="username" required></label>
       <label class="field"><span>Contraseña</span><input type="password" name="password" autocomplete="current-password" required></label>
@@ -101,34 +100,9 @@ async function entrarEnApp() {
   on('cambio', t => { if (t.includes('perfiles')) pintarUsuario(); });
   window.addEventListener('hashchange', irA);
   irA();
-  if (!S.talleres.size && esAdmin()) { location.hash = 'admin'; toast('Empieza cargando los talleres del registro oficial.'); }
   $('#exportLista').addEventListener('click', () => exportarExcel(talleresVisibles()));
   $('#nuevoTaller').addEventListener('click', nuevoTaller);
-}
-
-let tablaCP = null;
-function nuevoTaller() {
-  formulario({
-    titulo: 'Añadir un taller',
-    campos: [
-      { k: 'nombre', label: 'Nombre', required: true, full: true },
-      { k: 'direccion', label: 'Dirección', full: true },
-      { k: 'cp', label: 'Código postal', required: true, placeholder: '41500' },
-      { k: 'poblacion', label: 'Población', required: true },
-      { k: 'telefono', label: 'Teléfono', type: 'tel' },
-      { k: 'email', label: 'Email', type: 'email' },
-      { k: 'notas', label: 'Notas', type: 'textarea' }
-    ],
-    textoGuardar: 'Añadir',
-    alGuardar: async d => {
-      const cp = String(d.cp).replace(/\D/g, '').padStart(5, '0');
-      if (!tablaCP) tablaCP = await fetch('data/cp.json').then(r => r.json()).catch(() => ({}));
-      const p = tablaCP[cp]; if (!p) throw new Error('No encuentro ese código postal español.');
-      const ref = [...S.talleres.values()].find(t => t.provc === cp.slice(0, 2));
-      const r = await crear('talleres', { id: 'M-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), ...d, cp, lat: p[0], lon: p[1], precision: 'cp', provc: cp.slice(0, 2), provincia: ref?.provincia || null, ccaa: ref?.ccaa || null, pais: 'ES', redes: [], origen: 'manual', en_registro: false, tarjetas: 0, estado: '', comercial_id: esAdmin() ? null : S.yo.id, notas: d.notas || '' });
-      toast('Taller añadido'); emit('abrir', { id: r.id, volar: true });
-    }
-  });
+  $('#btnNuevo').addEventListener('click', nuevoTaller);
 }
 
 function irA() {

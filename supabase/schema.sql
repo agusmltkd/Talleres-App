@@ -124,11 +124,11 @@ language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.perfiles where id = auth.uid() and activo and rol = 'admin');
 $$;
 
--- Un comercial puede trabajar en sus talleres y en los que no tienen comercial.
+-- Un comercial solo ve y trabaja en sus talleres; la dirección, en todos.
 create or replace function public.puede_editar_taller(t text) returns boolean
 language sql stable security definer set search_path = public as $$
   select public.es_admin() or (public.es_activo() and exists (
-    select 1 from public.talleres where id = t and (comercial_id = auth.uid() or comercial_id is null)));
+    select 1 from public.talleres where id = t and comercial_id = auth.uid()));
 $$;
 
 -- ---------------------------------------------------------------------
@@ -252,24 +252,25 @@ create policy perfiles_editar on public.perfiles for update to authenticated
 
 -- talleres
 drop policy if exists talleres_leer on public.talleres;
-create policy talleres_leer on public.talleres for select to authenticated using (public.es_activo());
+create policy talleres_leer on public.talleres for select to authenticated
+  using (public.es_admin() or (public.es_activo() and comercial_id = auth.uid()));
 drop policy if exists talleres_crear on public.talleres;
 create policy talleres_crear on public.talleres for insert to authenticated
-  with check (public.es_admin() or (public.es_activo() and origen = 'manual' and (comercial_id = auth.uid() or comercial_id is null)));
+  with check (public.es_admin() or (public.es_activo() and origen = 'manual' and comercial_id = auth.uid()));
 drop policy if exists talleres_editar on public.talleres;
 create policy talleres_editar on public.talleres for update to authenticated
-  using (public.es_admin() or (public.es_activo() and (comercial_id = auth.uid() or comercial_id is null)))
-  with check (public.es_admin() or (public.es_activo() and (comercial_id = auth.uid() or comercial_id is null)));
+  using (public.es_admin() or (public.es_activo() and comercial_id = auth.uid()))
+  with check (public.es_admin() or (public.es_activo() and comercial_id = auth.uid()));
 drop policy if exists talleres_borrar on public.talleres;
 create policy talleres_borrar on public.talleres for delete to authenticated using (public.es_admin());
 
--- contactos, ventas y equipos: se leen todos; se escriben en los talleres propios o libres
+-- contactos, ventas y equipos: solo los de los talleres propios (la dirección, todos)
 do $$
 declare t text;
 begin
   foreach t in array array['contactos', 'ventas', 'equipos'] loop
     execute format('drop policy if exists %1$s_leer on public.%1$s', t);
-    execute format('create policy %1$s_leer on public.%1$s for select to authenticated using (public.es_activo())', t);
+    execute format('create policy %1$s_leer on public.%1$s for select to authenticated using (public.puede_editar_taller(taller_id))', t);
     execute format('drop policy if exists %1$s_crear on public.%1$s', t);
     execute format('create policy %1$s_crear on public.%1$s for insert to authenticated with check (public.puede_editar_taller(taller_id))', t);
     execute format('drop policy if exists %1$s_editar on public.%1$s', t);
@@ -281,10 +282,11 @@ end $$;
 
 -- visitas: además, cada comercial gestiona siempre las suyas
 drop policy if exists visitas_leer on public.visitas;
-create policy visitas_leer on public.visitas for select to authenticated using (public.es_activo());
+create policy visitas_leer on public.visitas for select to authenticated
+  using (public.es_admin() or (public.es_activo() and (comercial_id = auth.uid() or public.puede_editar_taller(taller_id))));
 drop policy if exists visitas_crear on public.visitas;
 create policy visitas_crear on public.visitas for insert to authenticated
-  with check (public.es_admin() or (public.es_activo() and (comercial_id = auth.uid() or public.puede_editar_taller(taller_id))));
+  with check (public.puede_editar_taller(taller_id));
 drop policy if exists visitas_editar on public.visitas;
 create policy visitas_editar on public.visitas for update to authenticated
   using (public.es_admin() or (public.es_activo() and (comercial_id = auth.uid() or creado_por = auth.uid())))

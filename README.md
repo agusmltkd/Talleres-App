@@ -1,4 +1,4 @@
-# Talleres de tacógrafo · guía de puesta en marcha
+# Wortach Workshops · guía de puesta en marcha
 
 App web para el equipo comercial: mapa de los centros técnicos de tacógrafo de España y Portugal, ficha de cada taller (estado, comercial, contactos, visitas, ventas y equipos), agenda, rutas, panel de resultados e importación/exportación a Excel. Funciona en el ordenador y se instala en el móvil como una app.
 
@@ -81,7 +81,7 @@ Cada persona puede cambiar su contraseña desde el menú de su cuenta (círculo 
 1. Abre la dirección y entra con el usuario administrador.
 2. Ve a **Gestión → Datos → Talleres del registro oficial → "Cargar talleres que falten"**. Sube a la base de datos los 881 centros (registro oficial del Ministerio a 30/09/2026, lista del IPQ de Portugal y tu recopilatorio de redes 2025). Solo hay que hacerlo una vez.
 3. Opcional pero recomendable: **Gestión → Datos → Ubicación exacta → "Buscar direcciones exactas"**. Busca cada taller por su dirección en OpenStreetMap para colocarlo en su sitio exacto (ahora está en el centro de su código postal). Va a un taller por segundo, así que tarda unos 15 minutos; puedes pararlo y seguir otro día. Los que no encuentre se pueden colocar a mano arrastrando el pin desde su ficha.
-4. **Gestión → Asignar talleres por provincia**: reparte los talleres entre los comerciales de un golpe.
+4. **Gestión → Asignar provincias a los comerciales**: marca provincias o comunidades enteras y pulsa «Asignar…». También se puede hacer desde el mapa: filtra (por provincia, comunidad…) y pulsa «Asignar» encima de la lista, o activa la capa «Provincias» y pulsa sobre una provincia.
 5. Pasa la dirección a los comerciales con su email y contraseña.
 
 ## Instalarla en el móvil
@@ -97,15 +97,21 @@ Aparece con su icono y se abre a pantalla completa. **"Cerca de mí"** usa el GP
 
 | | Administrador | Comercial |
 |---|---|---|
-| Ver todos los talleres en el mapa | ✔ | ✔ |
+| Ver talleres en el mapa | Todos | Solo los suyos |
 | Editar cualquier taller, asignar comerciales | ✔ | — |
-| Editar sus talleres, quedarse con uno libre | ✔ | ✔ |
+| Editar sus talleres | ✔ | ✔ |
+| Añadir talleres nuevos | ✔ (y elegir comercial) | ✔ (quedan a su nombre) |
+| Asignar provincias o comunidades enteras | ✔ | — |
 | Visitas, contactos, ventas y equipos | De todos | De sus talleres |
 | Panel de resultados | Todo el equipo y por comercial | Los suyos |
 | Gestión (usuarios, carga de datos, geolocalización, importar Excel) | ✔ | — |
 | Exportar a Excel | ✔ | ✔ (lo que ve en la lista) |
 
 Los cambios aparecen al momento en los demás dispositivos (el punto verde arriba indica que está sincronizado).
+
+## Logo
+
+El logo de la cabecera y de la pantalla de entrada se lee de `icons/logo.png`. Para cambiarlo basta con subir otro archivo con ese nombre.
 
 ## Importar desde Excel
 

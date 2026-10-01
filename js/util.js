@@ -96,3 +96,6 @@ export function confirmBtn(btn, action, label = '¿Seguro?') {
     btn.dataset.armed = ''; await action();
   });
 }
+
+// Marca de la empresa: logo (icons/logo.png, si existe) + WORTACH WORKSHOPS
+export const marcaHtml = (grande = false) => `<span class="marca${grande ? ' grande' : ''}"><img class="marca-logo" src="icons/logo.png" alt="Wortach S.L." onerror="this.remove()"><span class="marca-txt"><b>WORTACH</b><span>WORKSHOPS</span></span></span>`;

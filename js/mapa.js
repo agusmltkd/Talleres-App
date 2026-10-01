@@ -1,5 +1,6 @@
 // Vista de mapa: capa de talleres, filtros, lista y «cerca de mí»
-import { S, on, emit, nombreDe, colorDe, comerciales, getRuta } from './store.js';
+import { S, on, emit, esAdmin, nombreDe, colorDe, comerciales, getRuta } from './store.js';
+import { asignarTalleres } from './asignar.js';
 import { $, $$, esc, norm, css, hav, ESTADOS, REDES, estadoInfo, redBadges, fmtFechaCorta, diasDesde, iniciales, debounce, toast } from './util.js';
 
 export let map = null;
@@ -54,6 +55,14 @@ export function iniciarMapa() {
   $('#btnCerca').addEventListener('click', cercaDeMi);
   $('#colorModo').addEventListener('change', e => { colorModo = e.target.value; pintarMarcadores(); leyenda(); });
   $('#capaProv').addEventListener('change', pintarProvincias);
+  if (!esAdmin()) {
+    // El comercial solo trabaja con sus talleres: fuera las opciones de reparto
+    $$('#colorModo option[value="comercial"], #capaProv option[value="libres"]').forEach(o => o.remove());
+  }
+  $('#asignarLista').addEventListener('click', () => {
+    const nombre = F.prov ? $('#fProv').selectedOptions[0]?.textContent : F.zona;
+    asignarTalleres(visibles, nombre ? `Asignar ${nombre}` : 'Asignar los talleres de la lista');
+  });
   leyenda();
 }
 
@@ -97,9 +106,12 @@ export function rellenarSelects() {
   $('#fCom').value = F.com;
 }
 
+let encuadrado = false;
 export function refrescar() {
   if (!map) return;
   visibles = [...S.talleres.values()].filter(t => t.lat != null && filtrar(t));
+  // El comercial empieza viendo su zona, no toda la península
+  if (!encuadrado && !esAdmin() && visibles.length) { encuadrado = true; map.fitBounds(L.latLngBounds(visibles.map(t => [t.lat, t.lon])).pad(0.15), { maxZoom: 11 }); }
   pintarMarcadores(); renderLista(); pintarProvincias();
   $('#nVisibles').textContent = visibles.length.toLocaleString('es-ES');
   const n = [F.zona, F.prov, F.com, F.origen, F.sinVisita].filter(Boolean).length + F.estados.size + F.redes.size;
@@ -142,7 +154,8 @@ function renderLista() {
       <span class="rt">${com}<button class="icon" data-ruta="${esc(t.id)}" aria-label="${enRuta ? 'Quitar de la ruta' : 'Añadir a la ruta'}" title="${enRuta ? 'Quitar de la ruta' : 'Añadir a la ruta'}">${enRuta ? '✓' : '+'}</button></span>
       <span class="sub">${d != null ? `<b>${d < 10 ? d.toFixed(1) : Math.round(d)} km</b> · ` : ''}${esc(t.poblacion || '')}${t.provincia && t.provincia !== t.poblacion ? ' · ' + esc(t.provincia) : ''}${t.ultima_visita ? ' · visitado ' + fmtFechaCorta(t.ultima_visita) : ''} ${redBadges(t.redes)}${t.origen === 'kmz' ? ' <span class="badge src">No figura en el registro</span>' : ''}</span>
     </div>`;
-  }).join('') || '<p class="note pad">Ningún taller cumple estos filtros.</p>';
+  }).join('') || (S.talleres.size ? '<p class="note pad">Ningún taller cumple estos filtros.</p>'
+    : `<p class="note pad">${esAdmin() ? 'Todavía no hay talleres cargados.' : 'Todavía no tienes talleres asignados. Cuando la dirección te asigne una zona, aparecerán aquí y en el mapa. Mientras, puedes añadir talleres tú mismo.'}</p>`);
 }
 
 function cercaDeMi() {
@@ -167,7 +180,10 @@ async function pintarProvincias() {
   if (!provLayer) {
     const geo = await fetch('data/provincias.json').then(r => r.json());
     provLayer = L.geoJSON(geo, { style: { weight: 1, color: css('--line-strong'), fillOpacity: 0 } }).addTo(map);
-    provLayer.eachLayer(l => l.bindTooltip(() => tooltipProv(l.feature.properties), { sticky: true }));
+    provLayer.eachLayer(l => {
+      l.bindTooltip(() => tooltipProv(l.feature.properties) + (esAdmin() ? '<br><i>Pulsa para asignar la provincia</i>' : ''), { sticky: true });
+      l.on('click', () => { if (!esAdmin()) return; const p = l.feature.properties; asignarTalleres([...S.talleres.values()].filter(t => t.pais === 'ES' && t.provc === p.c), 'Asignar ' + p.n); });
+    });
     provLayer.bringToBack();
   }
   const cuenta = contarProv(modo);

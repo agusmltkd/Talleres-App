@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Talleres de tacógrafo</title>
-<meta name="description" content="Mapa comercial de talleres de tacógrafo: clientes, visitas, ventas y rutas.">
+<title>Wortach Workshops</title>
+<meta name="description" content="Wortach Workshops. Mapa comercial de talleres de tacógrafo: clientes, visitas, ventas y rutas.">
 <meta name="theme-color" content="#0d6b72">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
@@ -24,7 +24,7 @@
 
 <div id="app" hidden>
   <header class="top">
-    <div class="brand"><img src="icons/icon-192.png" alt="" width="28" height="28"><span class="app-nombre">Talleres de tacógrafo</span></div>
+    <div class="brand"></div>
     <nav class="nav" aria-label="Secciones">
       <button data-ir="mapa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 2.2 6 2v11.6l-6-2V6.2Z"/></svg><span>Mapa</span></button>
       <button data-ir="agenda"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7Zm-2 8h14v10H5V10Z"/></svg><span>Agenda</span><i class="badge-n badge-agenda" hidden></i></button>
@@ -40,6 +40,7 @@
       <div class="mapwrap">
         <div id="map" aria-label="Mapa de talleres"></div>
         <div class="float tl">
+          <button class="chip primario" id="btnNuevo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z"/></svg>Añadir taller</button>
           <button class="chip" id="btnCerca" aria-pressed="false">Cerca de mí</button>
           <button class="chip" data-vista-mapa="es">Península</button>
           <button class="chip" data-vista-mapa="pt">Portugal</button>
@@ -57,14 +58,14 @@
         <div class="grid2 tight">
           <select id="fZona" aria-label="Comunidad o país"></select>
           <select id="fProv" aria-label="Provincia"></select>
-          <select id="fCom" aria-label="Comercial"></select>
+          <select id="fCom" aria-label="Comercial" class="solo-admin"></select>
           <select id="fOrigen" aria-label="Origen"><option value="">Todos los orígenes</option><option value="reg">Registro oficial España</option><option value="ipq">Registro oficial Portugal</option><option value="kmz">Recopilatorio 2025</option><option value="manual">Añadidos por el equipo</option><option value="import">Importados de Excel</option></select>
         </div>
         <div class="chips" id="fEstados" aria-label="Estado"></div>
         <div class="chips" id="fRedes" aria-label="Red de marca"></div>
         <div class="row-between"><label class="note chk"><input type="checkbox" id="fSinVisita"> Sin visitar en 90 días</label><button class="linklike" id="fLimpiar">Quitar filtros</button></div>
         </div>
-        <div class="row-between list-head"><span class="note"><b id="nVisibles">0</b> en el mapa · <span id="nLista"></span></span><span><button class="linklike" id="nuevoTaller">Añadir taller</button> · <button class="linklike" id="exportLista">Excel</button></span></div>
+        <div class="row-between list-head"><span class="note"><b id="nVisibles">0</b> en el mapa · <span id="nLista"></span></span><span><button class="linklike solo-admin" id="asignarLista">Asignar</button><span class="solo-admin"> · </span><button class="linklike" id="nuevoTaller">Añadir</button> · <button class="linklike" id="exportLista">Excel</button></span></div>
         <div class="list" id="lista"></div>
       </aside>
     </section>

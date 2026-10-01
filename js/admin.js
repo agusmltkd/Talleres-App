@@ -3,20 +3,66 @@ import { S, on, emit, esAdmin, comerciales, nombreDe, guardar, guardarVarios } f
 import { $, $$, esc, norm, toast, loadScript, fmtNum, COLORES, estadoInfo, ORIGEN, PRECISION, TIPOS_VISITA, hoy, uid, confirmBtn } from './util.js';
 import { SUPABASE_URL } from './config.js';
 import { buscarDireccion } from './geocodificar.js';
+import { asignarTalleres } from './asignar.js';
 
 const XLSX_URL = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
 let geoParar = false, geoEnMarcha = false;
 
 export function iniciarAdmin() {
   on('vista', v => { if (v === 'admin') render(); });
-  on('cambio', tablas => { if (!$('#v-admin').hidden && tablas.includes('perfiles')) render(); });
+  on('cambio', tablas => {
+    if ($('#v-admin').hidden || !esAdmin()) return;
+    if (tablas.includes('perfiles')) render(); else if (tablas.includes('talleres')) renderAsignar();
+  });
+}
+
+// ---- Asignar provincias o comunidades enteras ----
+const marcadas = new Set();
+const claveProv = t => (t.pais === 'ES' ? t.provc : t.pais + ':' + (t.provincia || ''));
+function renderAsignar() {
+  const box = $('#asignarBox'); if (!box) return;
+  const grupos = new Map(); // ccaa -> Map(prov -> {nombre, talleres})
+  for (const t of S.talleres.values()) {
+    const g = t.ccaa || (t.pais === 'PT' ? 'Portugal' : 'Otros');
+    if (!grupos.has(g)) grupos.set(g, new Map());
+    const k = claveProv(t), m = grupos.get(g);
+    if (!m.has(k)) m.set(k, { nombre: t.provincia || t.poblacion || k, talleres: [] });
+    m.get(k).talleres.push(t);
+  }
+  const avatares = ts => {
+    const c = new Map(); for (const t of ts) if (t.comercial_id) c.set(t.comercial_id, (c.get(t.comercial_id) || 0) + 1);
+    return [...c].sort((a, b) => b[1] - a[1]).map(([id, n]) => `<span class="chip-p sm" title="${esc(nombreDe(id))}"><span class="dotc" style="background:${esc(S.perfiles.get(id)?.color || '#999')}"></span>${esc(nombreDe(id) || '¿?')} <b>${n}</b></span>`).join(' ') || '<span class="note">—</span>';
+  };
+  const filas = [...grupos].sort((a, b) => a[0].localeCompare(b[0], 'es')).map(([g, provs]) => {
+    const keys = [...provs.keys()]; const todas = keys.every(k => marcadas.has(k)), alguna = keys.some(k => marcadas.has(k));
+    const ts = [...provs.values()].flatMap(p => p.talleres);
+    return `<tr class="grupo"><td><input type="checkbox" data-grupo="${esc(g)}" ${todas ? 'checked' : ''} ${!todas && alguna ? 'data-mixto="1"' : ''} aria-label="Marcar toda ${esc(g)}"></td><td><b>${esc(g)}</b></td><td class="n">${ts.length}</td><td class="n">${ts.filter(t => !t.comercial_id).length}</td><td></td></tr>` +
+      [...provs].sort((a, b) => a[1].nombre.localeCompare(b[1].nombre, 'es')).map(([k, p]) => `<tr><td><input type="checkbox" data-prov="${esc(k)}" ${marcadas.has(k) ? 'checked' : ''} aria-label="Marcar ${esc(p.nombre)}"></td><td class="ind">${esc(p.nombre)}</td><td class="n">${p.talleres.length}</td><td class="n">${p.talleres.filter(t => !t.comercial_id).length}</td><td>${avatares(p.talleres)}</td></tr>`).join('');
+  }).join('');
+  const sel = [...S.talleres.values()].filter(t => marcadas.has(claveProv(t)));
+  box.innerHTML = `<h2 class="cap">Asignar provincias a los comerciales</h2>
+    <p class="note">Marca una o varias provincias (o una comunidad entera) y pulsa «Asignar». No hace falta ir taller por taller. También puedes filtrar en el mapa y usar «Asignar» encima de la lista.</p>
+    <div class="row-between"><span class="note"><b>${marcadas.size}</b> provincias marcadas · <b>${fmtNum(sel.length)}</b> talleres</span>
+      <span class="btns"><button class="btn" id="asNinguna" ${marcadas.size ? '' : 'disabled'}>Desmarcar</button><button class="btn primary" id="asGo" ${sel.length ? '' : 'disabled'}>Asignar…</button></span></div>
+    <div class="tablewrap alto"><table class="provs"><thead><tr><th></th><th>Provincia</th><th class="n">Talleres</th><th class="n">Sin comercial</th><th>Comerciales</th></tr></thead><tbody>${filas}</tbody></table></div>`;
+  box.querySelectorAll('[data-mixto]').forEach(c => { c.indeterminate = true; });
+  box.querySelector('tbody').addEventListener('change', e => {
+    const c = e.target;
+    if (c.dataset.prov) c.checked ? marcadas.add(c.dataset.prov) : marcadas.delete(c.dataset.prov);
+    if (c.dataset.grupo) for (const k of grupos.get(c.dataset.grupo).keys()) c.checked ? marcadas.add(k) : marcadas.delete(k);
+    const scroll = box.querySelector('.tablewrap').scrollTop; renderAsignar(); box.querySelector('.tablewrap').scrollTop = scroll;
+  });
+  $('#asNinguna').addEventListener('click', () => { marcadas.clear(); renderAsignar(); });
+  $('#asGo').addEventListener('click', () => {
+    const nombres = [...grupos.values()].flatMap(m => [...m]).filter(([k]) => marcadas.has(k)).map(([, p]) => p.nombre);
+    asignarTalleres(sel, nombres.length <= 3 ? 'Asignar ' + nombres.join(', ') : `Asignar ${nombres.length} provincias`);
+  });
 }
 
 function render() {
   if (!esAdmin()) { $('#v-admin').innerHTML = '<p class="note pad">Solo la dirección tiene acceso a esta sección.</p>'; return; }
   const perfiles = [...S.perfiles.values()].sort((a, b) => (b.activo - a.activo) || a.nombre.localeCompare(b.nombre, 'es'));
   const ref = (SUPABASE_URL.match(/https:\/\/([a-z0-9-]+)\.supabase\.co/i) || [])[1];
-  const provs = new Map(); for (const t of S.talleres.values()) provs.set(t.pais === 'ES' ? t.provc : t.pais + ':' + t.provincia, t.provincia || t.poblacion);
   const aprox = [...S.talleres.values()].filter(t => ['cp', 'zona', 'loc'].includes(t.precision)).length;
   const oficiales = [...S.talleres.values()].filter(t => t.origen === 'reg').length;
   $('#v-admin').innerHTML = `
@@ -33,15 +79,7 @@ function render() {
         </tbody></table></div>
       </section>
 
-      <section class="panel">
-        <h2 class="cap">Asignar talleres por provincia</h2>
-        <div class="grid2">
-          <label class="field"><span>Provincia</span><select id="asProv">${[...provs].sort((a, b) => String(a[1]).localeCompare(String(b[1]), 'es')).map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('')}</select></label>
-          <label class="field"><span>Comercial</span><select id="asCom"><option value="">Quitar comercial</option>${comerciales().map(p => `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('')}</select></label>
-        </div>
-        <label class="note chk"><input type="checkbox" id="asLibres" checked> Solo los talleres que aún no tienen comercial</label>
-        <div class="btns"><button class="btn primary" id="asGo">Asignar</button><span class="note" id="asMsg"></span></div>
-      </section>
+      <section class="panel" id="asignarBox"></section>
 
       <section class="panel">
         <h2 class="cap">Datos</h2>
@@ -66,15 +104,7 @@ function render() {
     });
   });
   // asignación
-  $('#asGo').addEventListener('click', async () => {
-    const pk = $('#asProv').value, com = $('#asCom').value || null, libres = $('#asLibres').checked;
-    const ids = [...S.talleres.values()].filter(t => (t.pais === 'ES' ? t.provc : t.pais + ':' + t.provincia) === pk && (!libres || !t.comercial_id)).map(t => t.id);
-    if (!ids.length) { $('#asMsg').textContent = 'No hay talleres que cambiar.'; return; }
-    $('#asGo').disabled = true;
-    try { const n = await guardarVarios('talleres', ids, { comercial_id: com }); $('#asMsg').textContent = `${n} talleres ${com ? 'asignados a ' + nombreDe(com) : 'sin comercial'}.`; }
-    catch (e) { toast(e.message, 'error'); }
-    $('#asGo').disabled = false;
-  });
+  renderAsignar();
   // datos iniciales
   $('#cargarIni').addEventListener('click', cargarIniciales);
   confirmBtn($('#actOficial'), actualizarOficiales, 'Pulsa otra vez para actualizar');

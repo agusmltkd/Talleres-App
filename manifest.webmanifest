@@ -1,7 +1,7 @@
 {
-  "name": "Talleres de tacógrafo",
-  "short_name": "Talleres",
-  "description": "Mapa comercial de talleres de tacógrafo: clientes, visitas, ventas y rutas.",
+  "name": "Wortach Workshops",
+  "short_name": "Wortach",
+  "description": "Wortach Workshops: mapa comercial de talleres de tacógrafo: clientes, visitas, ventas y rutas.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

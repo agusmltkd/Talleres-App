@@ -11,5 +11,5 @@ export const SUPABASE_URL = 'https://hxygwtmkzcplopllnbqt.supabase.co';
 // NUNCA pongas aquí la "secret" ni la "service_role".
 export const SUPABASE_ANON_KEY = 'sb_publishable_x6NIxK35tYKkqvZKxGWeGw_hdtHx7gh';
 
-// Nombre que aparece arriba a la izquierda
-export const NOMBRE_APP = 'Talleres de tacógrafo';
+// Nombre de la pestaña del navegador (la marca de arriba está en js/util.js → marcaHtml)
+export const NOMBRE_APP = 'Wortach Workshops';
