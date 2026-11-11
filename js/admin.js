@@ -4,6 +4,7 @@ import { $, $$, esc, norm, toast, loadScript, fmtNum, COLORES, estadoInfo, ORIGE
 import { SUPABASE_URL } from './config.js';
 import { buscarDireccion } from './geocodificar.js';
 import { asignarTalleres } from './asignar.js';
+import { renderCursos, renderRegistro, renderDuplicados, renderActividad } from './gestion.js';
 
 const XLSX_URL = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
 let geoParar = false, geoEnMarcha = false;
@@ -13,6 +14,7 @@ export function iniciarAdmin() {
   on('cambio', tablas => {
     if ($('#v-admin').hidden || !esAdmin()) return;
     if (tablas.includes('perfiles')) render(); else if (tablas.includes('talleres')) renderAsignar();
+    if (tablas.includes('cursos')) renderCursos($('#cursosBox'));
   });
 }
 
@@ -82,6 +84,12 @@ function render() {
 
       <section class="panel" id="asignarBox"></section>
 
+      <section class="panel" id="cursosBox"></section>
+
+      <section class="panel" id="registroBox"></section>
+
+      <section class="panel" id="dupBox"></section>
+
       <section class="panel">
         <h2 class="cap">Datos</h2>
         <div class="datos">
@@ -94,6 +102,8 @@ function render() {
             <div class="btns"><button class="btn primary" id="expTodo">Exportar todo a Excel</button><label class="btn" for="impFile">Importar Excel…</label><input type="file" id="impFile" accept=".xlsx,.xls,.csv" hidden></div><div id="impPrev"></div></div>
         </div>
       </section>
+
+      <section class="panel" id="actBox"></section>
     </div>`;
 
   // usuarios
@@ -106,6 +116,10 @@ function render() {
   });
   // asignación
   renderAsignar();
+  renderCursos($('#cursosBox'));
+  renderRegistro($('#registroBox'), { aplicar: async () => { await cargarIniciales(); await actualizarOficiales(); } });
+  renderDuplicados($('#dupBox'));
+  renderActividad($('#actBox'));
   // datos iniciales
   $('#cargarIni').addEventListener('click', cargarIniciales);
   confirmBtn($('#actOficial'), actualizarOficiales, 'Pulsa otra vez para actualizar');

@@ -40,15 +40,17 @@ export async function ponerFondo(map, k = estiloActual()) {
     const e = ESTILOS.find(x => x.k === est) || ESTILOS[0];
     if (capa && capa.getMaplibreMap) { capa.getMaplibreMap().setStyle(e.url); return; }
     if (capa) return; // fondo clásico: no cambia
+    const vivo = () => !!map._container?._leaflet_id && !!map._mapPane; // el mapa pudo quitarse mientras cargaba
     try {
       if (!webgl) throw new Error('sin WebGL');
       await cargarMapLibre();
+      if (!vivo()) return;
       capa = L.maplibreGL({ style: e.url, interactive: false }).addTo(map);
       map.getContainer().classList.remove('fondo-raster');
       // Si el servidor de mapas no responde, se pasa al mapa clásico
       const gl = capa.getMaplibreMap(); let cargado = false; gl.once('load', () => { cargado = true; });
       setTimeout(() => { if (!cargado && capa?.getMaplibreMap) { map.removeLayer(capa); capa = raster(map); } }, 12000);
-    } catch (err) { capa = raster(map); }
+    } catch (err) { if (vivo()) capa = raster(map); }
   };
   await poner(k);
   return poner;

@@ -1,6 +1,7 @@
 // Ficha de un taller: resumen, contactos, visitas, ventas y equipos
-import { S, on, emit, esAdmin, puedeEditar, nombreDe, colorDe, comerciales, guardar, crear, borrar, getRuta, setRuta } from './store.js';
-import { $, $$, esc, ESTADOS, estadoInfo, redBadges, ORIGEN, PRECISION, TIPOS_VISITA, TIPOS_EQUIPO, fmtFecha, fmtFechaCorta, fmtEur, hoy, addDays, iniciales, toast, confirmBtn, diasDesde, estadoTarjeta, textoTarjeta, vacio, cargandoHtml } from './util.js';
+import { S, on, emit, esAdmin, puedeEditar, nombreDe, colorDe, comerciales, guardar, crear, borrar, getRuta, setRuta, guardarConDeshacer, borrarConDeshacer } from './store.js';
+import { $, $$, esc, ESTADOS, estadoInfo, redBadges, ORIGEN, PRECISION, TIPOS_VISITA, TIPOS_EQUIPO, fmtFecha, fmtFechaCorta, fmtEur, hoy, addDays, iniciales, toast, confirmBtn, diasDesde, estadoTarjeta, textoTarjeta, vacio, cargandoHtml, modal, RESULTADOS } from './util.js';
+import { formacionDe, SITUACION, ENLACE_INSCRIPCION, enlaceEstadoTaller, vincular, desvincular, candidatos, nucleo, parecido, normalizar } from './cursos.js';
 import { formulario } from './formulario.js';
 import { volarA, colocarAMano } from './mapa.js';
 import { buscarDireccion } from './geocodificar.js';
@@ -15,7 +16,7 @@ export function iniciarFicha() {
     if (!S.talleres.has(actual)) { cerrar(); return; }
     const activo = document.activeElement;
     if (activo && drawer().contains(activo) && ['TEXTAREA', 'INPUT'].includes(activo.tagName)) return; // no pisar lo que se está escribiendo
-    if (tablas.some(t => ['talleres', 'visitas', 'ventas', 'equipos', 'perfiles'].includes(t))) render();
+    if (tablas.some(t => ['talleres', 'visitas', 'ventas', 'equipos', 'perfiles', 'cursos'].includes(t))) render();
   });
   on('ruta:cambio', () => { if (actual && !drawer().hidden) render(); });
   drawer().addEventListener('click', e => {
@@ -44,7 +45,8 @@ function render() {
   const vis = [...S.visitas.values()].filter(v => v.taller_id === t.id);
   const ven = [...S.ventas.values()].filter(v => v.taller_id === t.id);
   const eq = [...S.equipos.values()].filter(v => v.taller_id === t.id);
-  const tabs = [['resumen', 'Resumen'], ['contactos', 'Contactos', contactos.length], ['visitas', 'Visitas', vis.length], ['ventas', 'Ventas', ven.length], ['equipos', 'Equipos', eq.length]];
+  const fo = formacionDe(t.id);
+  const tabs = [['resumen', 'Resumen'], ['formacion', 'Formación', fo ? fo.tecnicos.length : 0], ['contactos', 'Contactos', contactos.length], ['visitas', 'Visitas', vis.length], ['ventas', 'Ventas', ven.length], ['equipos', 'Equipos', eq.length], ['historial', 'Historial']];
   drawer().innerHTML = `
     <div class="ficha-head" style="--c:var(${estadoInfo(t.estado).v === '--st-none' ? '--linea-2' : estadoInfo(t.estado).v})">
       <div><div class="et"><span class="est-pill${t.estado ? '' : ' sin'}" style="--c:var(${estadoInfo(t.estado).v})"><i></i>${esc(estadoInfo(t.estado).label)}</span>${redBadges(t.redes)}${t.origen === 'kmz' ? ' <span class="badge src">No figura en el registro</span>' : ''}</div><h2 class="titulo">${esc(t.nombre)}</h2><p class="note">${esc(t.direccion || '')}${t.cp ? ' · ' + esc(t.cp) : ''} ${esc(t.poblacion || '')}${t.provincia && t.provincia !== t.poblacion ? ' (' + esc(t.provincia) + ')' : ''}</p></div>
@@ -53,7 +55,7 @@ function render() {
     <div class="ftabs" role="tablist">${tabs.map(([k, l, n]) => `<button role="tab" data-tab="${k}" aria-selected="${k === pestana}">${l}${n ? `<span class="n">${n}</span>` : ''}</button>`).join('')}</div>
     <div class="ficha-body" id="fichaBody"></div>`;
   const body = $('#fichaBody');
-  ({ resumen, contactos: pContactos, visitas: pVisitas, ventas: pVentas, equipos: pEquipos })[pestana](body, t, { vis, ven, eq });
+  ({ resumen, formacion: pFormacion, contactos: pContactos, visitas: pVisitas, ventas: pVentas, equipos: pEquipos, historial: pHistorial })[pestana](body, t, { vis, ven, eq, fo });
 }
 
 // ------------------------------ Resumen ------------------------------
@@ -71,6 +73,8 @@ function resumen(body, t) {
   body.innerHTML = `
     ${(() => { const k = estadoTarjeta(t).k; if (!['caducada', 'd30', 'd90'].includes(k)) return '';
       return `<p class="aviso ${k === 'caducada' ? 'tj-caducada' : ''}"><span><b>Tarjeta de taller:</b> según el registro oficial, ${esc(textoTarjeta(t))}. ${k === 'caducada' ? 'Comprueba si la ha renovado.' : 'Buen momento para contactar.'}</span></p>`; })()}
+    ${(() => { const f = formacionDe(t.id); if (!f || !f.porRenovar) return '';
+      return `<p class="aviso ${f.r.caducado ? 'tj-caducada' : ''}"><span><b>Formación:</b> ${f.porRenovar === 1 ? '1 técnico tiene' : f.porRenovar + ' técnicos tienen'} que renovar el adiestramiento${f.r.caducado ? ` (${f.r.caducado} ya ${f.r.caducado === 1 ? 'caducado' : 'caducados'})` : ''}. <button class="linklike" data-tab="formacion">Ver técnicos</button></span></p>`; })()}
     ${!edit ? `<p class="aviso info">Este taller es de ${esc(nombreDe(t.comercial_id) || 'otro comercial')}. Puedes consultarlo, pero solo lo edita su comercial o la dirección.</p>` : ''}
     <div class="kpis3">
       <div><span>Última visita</span><b>${t.ultima_visita ? fmtFechaCorta(t.ultima_visita) : '—'}</b>${dias != null ? `<small>hace ${dias} días</small>` : '<small>nunca</small>'}</div>
@@ -106,18 +110,17 @@ function resumen(body, t) {
     </dl>
     ${admin ? '<div class="btns"><button class="btn danger" id="borrarTaller">Eliminar taller</button></div>' : ''}`;
 
-  $$('[data-estado]', body).forEach(b => b.addEventListener('click', () => guardar('talleres', t.id, { estado: b.dataset.estado })));
+  $$('[data-estado]', body).forEach(b => b.addEventListener('click', () => guardarConDeshacer('talleres', t.id, { estado: b.dataset.estado }, `Estado: ${estadoInfo(b.dataset.estado).label}`)));
   $('#tjEdit', body)?.addEventListener('click', () => formulario({
     titulo: 'Fecha de la tarjeta de taller', textoGuardar: 'Guardar',
     campos: [{ k: 'tarjeta_hasta', label: 'Válida hasta', type: 'date' }], valores: { tarjeta_hasta: t.tarjeta_hasta || '' },
     extra: '<p class="note">Útil si el taller te dice que ya la ha renovado. Al cargar un registro oficial nuevo se volverá a tomar la fecha del registro.</p>',
     alGuardar: async d => { await guardar('talleres', t.id, { tarjeta_hasta: d.tarjeta_hasta || null }); toast('Fecha guardada'); }
   }));
-  $('#fCom2', body)?.addEventListener('change', e => guardar('talleres', t.id, { comercial_id: e.target.value || null }).then(() => toast('Comercial asignado')));
+  $('#fCom2', body)?.addEventListener('change', e => guardarConDeshacer('talleres', t.id, { comercial_id: e.target.value || null }, e.target.value ? `Asignado a ${nombreDe(e.target.value)}` : 'Taller sin comercial'));
   $('#datosForm', body).addEventListener('submit', async e => {
     e.preventDefault(); const f = e.target;
-    await guardar('talleres', t.id, { telefono: f.telefono.value.trim() || null, email: f.email.value.trim() || null, web: f.web.value.trim() || null, notas: f.notas.value.trim() });
-    toast('Datos guardados');
+    await guardarConDeshacer('talleres', t.id, { telefono: f.telefono.value.trim() || null, email: f.email.value.trim() || null, web: f.web.value.trim() || null, notas: f.notas.value.trim() }, 'Datos guardados');
   });
   $('#nuevaVisita', body).addEventListener('click', () => formVisita(t));
   $('#rutaBtn', body).addEventListener('click', () => { const r = getRuta(); const i = r.indexOf(t.id); if (i >= 0) r.splice(i, 1); else r.push(t.id); setRuta(r); });
@@ -155,37 +158,68 @@ function pContactos(body, t) {
     const c = contactos.find(x => x.id === b.dataset.editc);
     formulario({ titulo: 'Editar contacto', campos, valores: c, alGuardar: async d => { const r = await S.api.update('contactos', c.id, d); Object.assign(c, r); render(); } });
   }));
-  $$('[data-delc]', body).forEach(b => confirmBtn(b, async () => { try { await S.api.remove('contactos', b.dataset.delc); contactos = contactos.filter(x => x.id !== b.dataset.delc); render(); } catch (e) { toast(e.message, 'error'); } }));
+  $$('[data-delc]', body).forEach(b => confirmBtn(b, async () => {
+    const c = contactos.find(x => x.id === b.dataset.delc);
+    try { await S.api.remove('contactos', c.id); contactos = contactos.filter(x => x.id !== c.id); render();
+      toast('Contacto eliminado', '', { deshacer: async () => { const r = await S.api.insert('contactos', c); contactos.push(r); if (actual === t.id) render(); } });
+    } catch (e) { toast(e.message, 'error'); } }));
 }
 
 // ------------------------------ Visitas ------------------------------
+// Informe de visita rápido: se rellena con toques, pensado para el móvil al salir del taller.
+const SEGUIMIENTO = [['', 'No'], ['7', '1 semana'], ['14', '2 semanas'], ['30', '1 mes'], ['90', '3 meses']];
 export function formVisita(t, v = null, preset = {}) {
   const admin = esAdmin();
-  const campos = [
-    { k: 'fecha', label: 'Fecha', type: 'date', required: true, def: hoy() },
-    { k: 'hora', label: 'Hora', type: 'time' },
-    { k: 'tipo', label: 'Tipo', type: 'select', options: Object.entries(TIPOS_VISITA), def: 'visita' },
-    { k: 'estado', label: 'Estado', type: 'select', options: [['hecha', 'Hecha'], ['planificada', 'Planificada'], ['cancelada', 'Cancelada']], def: 'hecha' },
-    ...(admin ? [{ k: 'comercial_id', label: 'Comercial', type: 'select', options: comerciales().map(p => [p.id, p.nombre]), def: t.comercial_id || S.yo.id }] : []),
-    { k: 'resumen', label: 'Qué se habló', type: 'textarea', placeholder: 'Resumen de la visita o motivo de la cita' },
-    { k: 'proximo_paso', label: 'Próximo paso', full: true, placeholder: 'Ej. enviar presupuesto del banco de pruebas' }
-  ];
-  const extra = v ? '' : `<label class="note chk"><input type="checkbox" id="planSig"> Planificar también la siguiente visita dentro de <input type="number" id="planDias" value="30" min="1" max="365" style="width:64px"> días</label>`;
-  formulario({
-    titulo: v ? 'Editar visita' : `Visita a ${t.nombre}`, campos, valores: { ...preset, ...(v || {}) }, extra,
-    textoGuardar: v ? 'Guardar' : 'Registrar',
-    alGuardar: async d => {
-      if (!admin) d.comercial_id = v?.comercial_id || S.yo.id;
-      if (v) await guardar('visitas', v.id, d);
-      else {
-        await crear('visitas', { ...d, taller_id: t.id });
-        if ($('#planSig')?.checked) {
-          const dias = Math.max(1, +$('#planDias').value || 30);
-          await crear('visitas', { taller_id: t.id, comercial_id: d.comercial_id, fecha: addDays(d.fecha, dias), tipo: 'visita', estado: 'planificada', resumen: d.proximo_paso || 'Visita de seguimiento', proximo_paso: '' });
-        }
-        toast(d.estado === 'planificada' ? 'Visita planificada' : 'Visita registrada');
-      }
-    }
+  const d0 = { fecha: hoy(), hora: '', tipo: 'visita', estado: 'hecha', resultado: '', resumen: '', proximo_paso: '', comercial_id: t.comercial_id || S.yo.id, ...preset, ...(v || {}), ...(v ? preset : {}) };
+  const seg = (nombre, opciones, valor) => `<div class="seg" role="radiogroup" data-seg="${nombre}">${opciones.map(([k, l]) => `<button type="button" role="radio" data-v="${esc(k)}" aria-checked="${String(k) === String(valor ?? '')}">${esc(l)}</button>`).join('')}</div>`;
+  const { el, close } = modal(`<form class="form visita-rapida">
+    <div class="modal-head"><div><h3>${v ? 'Editar visita' : esc(t.nombre)}</h3>${v ? '' : `<p class="note">${esc(t.poblacion || '')}${t.provincia && t.provincia !== t.poblacion ? ' · ' + esc(t.provincia) : ''}</p>`}</div><button type="button" class="icon" data-close aria-label="Cerrar">×</button></div>
+    ${seg('estado', v ? [['hecha', 'Hecha'], ['planificada', 'Planificada'], ['cancelada', 'Cancelada']] : [['hecha', 'Ya la he hecho'], ['planificada', 'La planifico']], d0.estado)}
+    ${seg('tipo', Object.entries(TIPOS_VISITA), d0.tipo)}
+    <div class="grid2"><label class="field"><span>Fecha</span><input type="date" name="fecha" value="${esc(d0.fecha)}" required></label><label class="field"><span>Hora</span><input type="time" name="hora" value="${esc((d0.hora || '').slice(0, 5))}"></label></div>
+    <div class="solo-hecha"><div class="field"><span>¿Cómo ha ido?</span>${seg('resultado', Object.entries(RESULTADOS), d0.resultado)}</div></div>
+    <label class="field"><span class="solo-hecha">Qué se habló</span><span class="solo-plan">Motivo de la cita</span><textarea name="resumen" maxlength="2000" placeholder="Lo importante en dos líneas">${esc(d0.resumen)}</textarea></label>
+    <label class="field solo-hecha"><span>Próximo paso</span><input name="proximo_paso" maxlength="300" value="${esc(d0.proximo_paso)}" placeholder="Ej. enviar presupuesto del banco de pruebas"></label>
+    ${v ? '' : `<div class="field solo-hecha"><span>Volver a contactar en</span>${seg('seguimiento', SEGUIMIENTO, '30')}</div>`}
+    ${admin ? `<label class="field"><span>Comercial</span><select name="comercial_id">${comerciales().map(p => `<option value="${esc(p.id)}"${p.id === d0.comercial_id ? ' selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select></label>` : ''}
+    <label class="note chk solo-venta" hidden><input type="checkbox" name="conVenta" checked> Anotar también el presupuesto o pedido al guardar</label>
+    <p class="note err" hidden></p>
+    <div class="btns end"><button type="button" class="btn" data-close>Cancelar</button><button type="submit" class="btn primary">${v ? 'Guardar' : 'Registrar'}</button></div>
+  </form>`);
+  const f = el.querySelector('form'); const val = n => f.querySelector(`[data-seg="${n}"] [aria-checked="true"]`)?.dataset.v ?? '';
+  const pintar = () => {
+    const hecha = val('estado') === 'hecha';
+    f.querySelectorAll('.solo-hecha').forEach(x => { x.hidden = !hecha; });
+    f.querySelectorAll('.solo-plan').forEach(x => { x.hidden = hecha; });
+    const r = val('resultado'); f.querySelector('.solo-venta').hidden = v || !hecha || !['presupuesto', 'pedido'].includes(r);
+  };
+  f.addEventListener('click', e => {
+    const b = e.target.closest('.seg [role=radio]'); if (!b) return;
+    const g = b.parentElement, ya = b.getAttribute('aria-checked') === 'true';
+    g.querySelectorAll('[role=radio]').forEach(x => x.setAttribute('aria-checked', 'false'));
+    if (!(ya && g.dataset.seg === 'resultado')) b.setAttribute('aria-checked', 'true');
+    if (g.dataset.seg === 'estado' && b.dataset.v === 'planificada' && f.fecha.value <= hoy() && !v) f.fecha.value = addDays(hoy(), 7);
+    if (g.dataset.seg === 'estado' && b.dataset.v === 'hecha' && f.fecha.value > hoy()) f.fecha.value = hoy();
+    pintar();
+  });
+  pintar();
+  f.addEventListener('submit', async e => {
+    e.preventDefault();
+    const estado = val('estado') || 'hecha', hecha = estado === 'hecha';
+    const d = { fecha: f.fecha.value, hora: f.hora.value || null, tipo: val('tipo') || 'visita', estado,
+      resultado: hecha ? val('resultado') : '', resumen: f.resumen.value.trim(), proximo_paso: hecha ? f.proximo_paso.value.trim() : '',
+      comercial_id: admin ? f.comercial_id.value : (v?.comercial_id || S.yo.id) };
+    const btn = f.querySelector('[type=submit]'); btn.disabled = true;
+    try {
+      if (v) { await guardarConDeshacer('visitas', v.id, d, 'Visita guardada'); close(); return; }
+      await crear('visitas', { ...d, taller_id: t.id });
+      const dias = hecha ? val('seguimiento') : '';
+      if (dias) await crear('visitas', { taller_id: t.id, comercial_id: d.comercial_id, fecha: addDays(d.fecha, +dias), tipo: 'visita', estado: 'planificada', resumen: d.proximo_paso || 'Seguimiento', proximo_paso: '', resultado: '' });
+      const venta = !f.querySelector('.solo-venta').hidden && f.conVenta.checked ? d.resultado : null;
+      close();
+      toast(hecha ? `Visita registrada${dias ? ` · seguimiento el ${fmtFechaCorta(addDays(d.fecha, +dias))}` : ''}` : `Visita planificada para el ${fmtFechaCorta(d.fecha)}`);
+      if (venta) formVenta(t, { tipo: venta, estado: venta === 'pedido' ? 'ganado' : 'abierto', concepto: d.proximo_paso || '' });
+    } catch (err) { const p = f.querySelector('.err'); p.hidden = false; p.textContent = err.message; btn.disabled = false; }
   });
 }
 function pVisitas(body, t, { vis }) {
@@ -195,7 +229,7 @@ function pVisitas(body, t, { vis }) {
     <div class="timeline">${orden.map(v => {
       const mia = esAdmin() || v.comercial_id === S.yo.id || v.creado_por === S.yo.id;
       return `<div class="tl-i ${v.estado}">
-        <div class="tl-h"><b>${fmtFecha(v.fecha)}${v.hora ? ' · ' + v.hora.slice(0, 5) : ''}</b><span class="pill ${v.estado}">${v.estado === 'planificada' ? 'Planificada' : v.estado === 'hecha' ? 'Hecha' : 'Cancelada'}</span><span class="note">${esc(TIPOS_VISITA[v.tipo] || '')} · ${esc(nombreDe(v.comercial_id) || 'Sin comercial')}</span></div>
+        <div class="tl-h"><b>${fmtFecha(v.fecha)}${v.hora ? ' · ' + v.hora.slice(0, 5) : ''}</b><span class="pill ${v.estado}">${v.estado === 'planificada' ? 'Planificada' : v.estado === 'hecha' ? 'Hecha' : 'Cancelada'}</span>${v.resultado ? `<span class="pill res-${esc(v.resultado)}">${esc(RESULTADOS[v.resultado] || '')}</span>` : ''}<span class="note">${esc(TIPOS_VISITA[v.tipo] || '')} · ${esc(nombreDe(v.comercial_id) || 'Sin comercial')}</span></div>
         ${v.resumen ? `<p>${esc(v.resumen)}</p>` : ''}${v.proximo_paso ? `<p class="note">Próximo paso: ${esc(v.proximo_paso)}</p>` : ''}
         ${mia ? `<div class="btns sm">${v.estado === 'planificada' ? `<button class="btn primary" data-hecha="${esc(v.id)}">Marcar como hecha</button>` : ''}<button class="btn" data-editv="${esc(v.id)}">Editar</button><button class="btn danger" data-delv="${esc(v.id)}">Eliminar</button></div>` : ''}
       </div>`;
@@ -204,14 +238,11 @@ function pVisitas(body, t, { vis }) {
   $('#planV', body)?.addEventListener('click', () => formVisita(t, null, { estado: 'planificada', fecha: addDays(hoy(), 7) }));
   $$('[data-editv]', body).forEach(b => b.addEventListener('click', () => formVisita(t, S.visitas.get(b.dataset.editv))));
   $$('[data-hecha]', body).forEach(b => b.addEventListener('click', () => formVisita(t, S.visitas.get(b.dataset.hecha), { estado: 'hecha', fecha: hoy() })));
-  $$('[data-delv]', body).forEach(b => confirmBtn(b, () => borrar('visitas', b.dataset.delv)));
+  $$('[data-delv]', body).forEach(b => confirmBtn(b, () => borrarConDeshacer('visitas', b.dataset.delv, 'Visita eliminada')));
 }
 
 // ------------------------------ Ventas ------------------------------
-function pVentas(body, t, { ven }) {
-  const edit = puedeEditar(t);
-  const tot = e => ven.filter(v => v.estado === e).reduce((a, v) => a + Number(v.importe || 0), 0);
-  const campos = [
+const camposVenta = () => [
     { k: 'fecha', label: 'Fecha', type: 'date', required: true, def: hoy() },
     { k: 'tipo', label: 'Tipo', type: 'select', options: [['presupuesto', 'Presupuesto'], ['pedido', 'Pedido']] },
     { k: 'concepto', label: 'Concepto', required: true, full: true, placeholder: 'Ej. Banco de pruebas de tacógrafos' },
@@ -219,6 +250,14 @@ function pVentas(body, t, { ven }) {
     { k: 'estado', label: 'Estado', type: 'select', options: [['abierto', 'Abierto'], ['ganado', 'Ganado'], ['perdido', 'Perdido']] },
     { k: 'notas', label: 'Notas', type: 'textarea' }
   ];
+export function formVenta(t, valores = {}) {
+  formulario({ titulo: 'Nuevo presupuesto o pedido', campos: camposVenta(), valores, alGuardar: async d => { await crear('ventas', { ...d, taller_id: t.id, comercial_id: t.comercial_id || S.yo.id }); toast('Guardado'); } });
+}
+function pVentas(body, t, { ven }) {
+  const edit = puedeEditar(t);
+  const tot = e => ven.filter(v => v.estado === e).reduce((a, v) => a + Number(v.importe || 0), 0);
+  const campos = camposVenta();
+
   body.innerHTML = `
     <div class="kpis3"><div><span>Abierto</span><b>${fmtEur(tot('abierto'))}</b></div><div><span>Ganado</span><b>${fmtEur(tot('ganado'))}</b></div><div><span>Perdido</span><b>${fmtEur(tot('perdido'))}</b></div></div>
     ${edit ? '<div class="btns"><button class="btn primary" id="addS">Nuevo presupuesto o pedido</button></div>' : ''}
@@ -226,11 +265,11 @@ function pVentas(body, t, { ven }) {
     ${ven.sort((a, b) => b.fecha.localeCompare(a.fecha)).map(v => `<tr><td>${fmtFechaCorta(v.fecha)}</td><td>${esc(v.concepto)}<div class="note">${v.tipo === 'pedido' ? 'Pedido' : 'Presupuesto'} · ${esc(nombreDe(v.comercial_id) || '')}</div></td><td class="n">${fmtEur(v.importe)}</td><td><span class="pill ${v.estado}">${v.estado === 'abierto' ? 'Abierto' : v.estado === 'ganado' ? 'Ganado' : 'Perdido'}</span></td>
       <td>${edit ? `<button class="icon" data-edits="${esc(v.id)}" aria-label="Editar">✎</button>` : ''}</td></tr>`).join('') || `<tr><td colspan="5">${vacio('Anota aquí los presupuestos y pedidos de este taller.', 'Sin presupuestos ni pedidos')}</td></tr>`}
     </tbody></table></div>`;
-  $('#addS', body)?.addEventListener('click', () => formulario({ titulo: 'Nuevo presupuesto o pedido', campos, alGuardar: async d => { await crear('ventas', { ...d, taller_id: t.id, comercial_id: t.comercial_id || S.yo.id }); toast('Guardado'); } }));
+  $('#addS', body)?.addEventListener('click', () => formVenta(t));
   $$('[data-edits]', body).forEach(b => b.addEventListener('click', () => {
     const v = S.ventas.get(b.dataset.edits);
     const { el } = formulario({ titulo: 'Editar', campos, valores: v, alGuardar: d => guardar('ventas', v.id, d), extra: '<div class="btns"><button type="button" class="btn danger" id="delS">Eliminar</button></div>' });
-    confirmBtn(el.querySelector('#delS'), async () => { await borrar('ventas', v.id); el.parentElement.hidden = true; el.parentElement.innerHTML = ''; });
+    confirmBtn(el.querySelector('#delS'), async () => { el.parentElement.hidden = true; el.parentElement.innerHTML = ''; await borrarConDeshacer('ventas', v.id, 'Presupuesto eliminado'); });
   }));
 }
 
@@ -256,5 +295,123 @@ function pEquipos(body, t, { eq }) {
     }).join('') || vacio('Anota los que le habéis vendido para que la agenda os avise de sus revisiones.', 'No hay equipos registrados')}</div>`;
   $('#addE', body)?.addEventListener('click', () => formulario({ titulo: 'Nuevo equipo', campos, alGuardar: async d => { await crear('equipos', { ...d, taller_id: t.id }); toast('Equipo añadido'); } }));
   $$('[data-edite]', body).forEach(b => b.addEventListener('click', () => { const e = S.equipos.get(b.dataset.edite); formulario({ titulo: 'Editar equipo', campos, valores: e, alGuardar: d => guardar('equipos', e.id, d) }); }));
-  $$('[data-dele]', body).forEach(b => confirmBtn(b, () => borrar('equipos', b.dataset.dele)));
+  $$('[data-dele]', body).forEach(b => confirmBtn(b, () => borrarConDeshacer('equipos', b.dataset.dele, 'Equipo eliminado')));
+}
+
+// ------------------------------ Formación (datos de Cursos) ------------------------------
+function pFormacion(body, t, { fo }) {
+  const admin = esAdmin();
+  if (!fo) {
+    const sync = S.ajustes.get('cursos_sync');
+    body.innerHTML = vacio(sync ? 'Ningún técnico de este taller se ha inscrito en los cursos de adiestramiento, o todavía no se ha unido con su ficha de Cursos.' : 'Todavía no se han traído los datos de Cursos. La dirección puede hacerlo desde Gestión.', 'Sin datos de formación')
+      + (admin && S.centros.size ? `<div class="btns" style="justify-content:center"><button class="btn primary" id="unirCentro">Unir con un taller de Cursos</button></div>` : '')
+      + `<div class="btns" style="justify-content:center"><a class="btn" href="${ENLACE_INSCRIPCION}" target="_blank" rel="noopener">Formulario de inscripción</a><button class="btn" id="copiaInsc">Copiar enlace de inscripción</button></div>`;
+    $('#unirCentro', body)?.addEventListener('click', () => elegirCentro(t));
+    $('#copiaInsc', body)?.addEventListener('click', () => copiar(ENLACE_INSCRIPCION, 'Enlace de inscripción copiado'));
+    return;
+  }
+  const { r, tecnicos, centros } = fo;
+  const c0 = centros[0];
+  const fila = x => {
+    const sit = SITUACION[x.situacion];
+    const det = x.situacion === 'inscrito' ? `Próximo curso el ${fmtFecha(x.proximo_curso)}`
+      : x.situacion === 'sin_formacion' ? 'Inscrito alguna vez, sin curso terminado'
+      : `${x.ultimo_tipo === 'iniciacion' ? 'Iniciación' : 'Actualización'} el ${fmtFecha(x.ultima_fecha)} · ${x.situacion === 'caducado' ? 'caducó' : 'renovar antes del'} ${fmtFecha(x.renovar_antes)}`;
+    return `<div class="tec"><span class="tec-av ${sit.cls}">${esc(iniciales(x.nombre))}</span><div class="grow"><b>${esc(x.nombre)}</b><div class="note">${esc(det)}${x.sin_avisos ? ' · sin avisos' : ''}</div></div><span class="pill sit-${sit.cls}">${sit.label}</span></div>`;
+  };
+  const datosCursos = centros.filter(c => c.contacto || c.telefono || c.email);
+  body.innerHTML = `
+    <div class="kpis3 kpis4">
+      <div class="${r.caducado ? 'mal' : ''}"><span>Caducados</span><b>${r.caducado}</b></div>
+      <div class="${r.vence_pronto ? 'aviso-k' : ''}"><span>Vencen pronto</span><b>${r.vence_pronto}</b></div>
+      <div><span>Inscritos</span><b>${r.inscrito}</b></div>
+      <div class="bien"><span>Al día</span><b>${r.al_dia}</b></div>
+    </div>
+    <div class="btns">
+      ${c0?.token ? `<a class="btn primary" href="${esc(enlaceEstadoTaller(c0.token))}" target="_blank" rel="noopener">Estado de sus técnicos</a><button class="btn" id="copiaEstado">Copiar enlace para el taller</button>` : ''}
+      <a class="btn" href="${ENLACE_INSCRIPCION}" target="_blank" rel="noopener">Formulario de inscripción</a>
+    </div>
+    <div class="tecs">${tecnicos.map(fila).join('') || vacio('Su ficha de Cursos no tiene técnicos.', '', { peq: true })}</div>
+    ${datosCursos.length ? `<div class="card"><div class="card-h"><b>Datos que dejó en Cursos</b></div>${datosCursos.map(c => `
+      <dl class="kv sin-linea">${c.contacto ? `<dt>Contacto</dt><dd>${esc(c.contacto)}</dd>` : ''}${c.telefono ? `<dt>Teléfono</dt><dd><a href="tel:${esc(c.telefono.replace(/\s/g, ''))}">${esc(c.telefono)}</a></dd>` : ''}${c.email ? `<dt>Correo</dt><dd><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></dd>` : ''}</dl>
+      ${puedeEditar(t) && ((c.telefono && !t.telefono) || (c.email && !t.email) || c.contacto) ? `<div class="btns sm"><button class="btn" data-pasar="${esc(c.id)}">Pasar a la ficha del taller</button></div>` : ''}`).join('')}</div>` : ''}
+    <p class="note">Datos de la plataforma de Cursos${(v => v ? `, copiados el ${new Date(v.fecha).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}` : '')(S.ajustes.get('cursos_sync')?.valor)}. Unido con «${esc(centros.map(c => c.nombre).join('», «'))}»${(() => { const m = centros.map(c => S.vinculos.get(c.id)?.metodo); return m.includes('auto') ? ' automáticamente' : ''; })()}.
+      ${admin ? ` <button class="linklike" id="otroCentro">Unir otro</button> · <button class="linklike" id="quitarUnion">No es este taller</button>` : ''}</p>`;
+  $('#copiaEstado', body)?.addEventListener('click', () => copiar(enlaceEstadoTaller(c0.token), 'Enlace copiado: el taller ve sus técnicos y cuándo renovar'));
+  $('#otroCentro', body)?.addEventListener('click', () => elegirCentro(t));
+  $('#quitarUnion', body)?.addEventListener('click', async () => {
+    for (const c of centros) await vincular(c.id, null);
+    toast('Unión quitada', '', { deshacer: async () => { for (const c of centros) await vincular(c.id, t.id, 'manual'); } });
+  });
+  $$('[data-pasar]', body).forEach(b => b.addEventListener('click', async () => {
+    const c = S.centros.get(b.dataset.pasar); const patch = {};
+    if (c.telefono && !t.telefono) patch.telefono = c.telefono;
+    if (c.email && !t.email) patch.email = c.email;
+    if (Object.keys(patch).length) await guardarConDeshacer('talleres', t.id, patch, 'Datos de Cursos pasados a la ficha');
+    if (c.contacto && !contactos.some(x => normalizar(x.nombre) === normalizar(c.contacto))) {
+      try { const r = await S.api.insert('contactos', { taller_id: t.id, nombre: c.contacto, telefono: c.telefono || null, email: c.email || null, notas: 'Contacto que figura en Cursos' }); contactos.push(r); } catch (e) { toast(e.message, 'error'); }
+    }
+    render();
+  }));
+}
+
+async function copiar(texto, msg) {
+  try { await navigator.clipboard.writeText(texto); toast(msg); } catch (e) { prompt('Copia este enlace:', texto); }
+}
+
+// La dirección elige a mano qué ficha de Cursos es este taller
+function elegirCentro(t) {
+  const libres = [...S.centros.values()].filter(c => { const v = S.vinculos.get(c.id); return !v || v.metodo === 'descartado'; });
+  const n = nucleo(t.nombre);
+  const puntua = c => parecido(n, nucleo(c.nombre)) + (normalizar(c.provincia) === normalizar(t.provincia) ? .25 : 0);
+  const { el, close } = modal(`<div class="modal-head"><h3>¿Cuál es en Cursos?</h3><button class="icon" data-close aria-label="Cerrar">×</button></div>
+    <p class="note">Elige la ficha de Cursos de <b>${esc(t.nombre)}</b>. Sus técnicos aparecerán en la pestaña Formación.</p>
+    <input class="search" id="qCentro" placeholder="Buscar en Cursos" value="">
+    <div class="pick" id="pickC"></div>`);
+  const pintar = () => {
+    const q = normalizar(el.querySelector('#qCentro').value);
+    const lista = libres.filter(c => !q || normalizar(c.nombre).includes(q)).map(c => ({ c, p: puntua(c) })).sort((a, b) => b.p - a.p).slice(0, 30);
+    el.querySelector('#pickC').innerHTML = lista.map(({ c }) => `<button class="pick-i" data-c="${esc(c.id)}"><b>${esc(c.nombre)}</b><span class="note">${esc(c.provincia || 'Sin provincia')} · ${(S.tecnicos.get(c.id) || []).length} técnicos</span></button>`).join('') || vacio('No queda ninguna ficha de Cursos sin unir que se parezca.', '', { peq: true });
+  };
+  el.querySelector('#qCentro').addEventListener('input', pintar); pintar();
+  el.addEventListener('click', async e => {
+    const b = e.target.closest('[data-c]'); if (!b) return;
+    await vincular(b.dataset.c, t.id, 'manual'); close(); toast('Unido con su ficha de Cursos');
+  });
+}
+
+// ------------------------------ Historial ------------------------------
+const CAMPOS = { estado: 'estado', comercial_id: 'comercial', telefono: 'teléfono', email: 'correo', web: 'web', notas: 'notas', nombre: 'nombre', direccion: 'dirección', lat: 'ubicación', lon: null, precision: null,
+  tarjeta_hasta: 'tarjeta de taller', tarjetas: null, en_registro: 'registro oficial', redes: 'redes', cif: 'CIF', fecha: 'fecha', hora: 'hora', tipo: 'tipo', resumen: 'resumen', proximo_paso: 'próximo paso',
+  resultado: 'resultado', importe: 'importe', concepto: 'concepto', marca: 'marca', modelo: 'modelo', n_serie: 'nº de serie', proxima_revision: 'próxima revisión', cargo: 'cargo', taller_id: 'taller' };
+const QUE = { talleres: 'el taller', visitas: 'una visita', ventas: 'un presupuesto o pedido', equipos: 'un equipo', contactos: 'un contacto' };
+function valorTxt(k, v) {
+  if (k === 'estado' && (v == null || v === '')) return 'Sin clasificar';
+  if (k === 'comercial_id' && !v) return 'sin comercial';
+  if (v == null || v === '') return '—';
+  if (k === 'estado' && typeof v === 'string' && estadoInfo(v).k === v) return estadoInfo(v).label;
+  if (k === 'comercial_id') return nombreDe(v) || 'otro usuario';
+  if (k === 'resultado') return RESULTADOS[v] || v;
+  if (k === 'importe') return fmtEur(v);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(v))) return fmtFecha(v);
+  if (Array.isArray(v)) return v.join(', ') || '—';
+  const t = String(v); return t.length > 60 ? t.slice(0, 57) + '…' : t;
+}
+export function textoHistorial(h) {
+  const tu = h.usuario === S.yo.id;
+  const quien = h.usuario ? (tu ? 'Tú' : nombreDe(h.usuario) || 'Otro usuario') : 'El sistema';
+  const v = (el, tu2) => tu ? tu2 : el;
+  if (h.accion === 'alta') return `${quien} ${h.tabla === 'talleres' ? v('dio', 'diste') + ' de alta el taller' : `${v('añadió', 'añadiste')} ${QUE[h.tabla]}`}${h.tabla === 'visitas' && h.despues ? ` (${(h.despues.estado === 'planificada' ? 'planificada' : 'hecha')} el ${fmtFecha(h.despues.fecha)})` : h.despues?.concepto ? ` (${h.despues.concepto})` : h.despues?.nombre && h.tabla !== 'talleres' ? ` (${h.despues.nombre})` : ''}`;
+  if (h.accion === 'baja') return `${quien} ${v('eliminó', 'eliminaste')} ${QUE[h.tabla]}${h.antes?.concepto ? ` (${h.antes.concepto})` : h.antes?.nombre ? ` (${h.antes.nombre})` : h.antes?.fecha ? ` del ${fmtFecha(h.antes.fecha)}` : ''}`;
+  const cambios = Object.keys(h.despues || {}).filter(k => CAMPOS[k] !== null);
+  const det = cambios.map(k => k === 'lat' ? 'la ubicación en el mapa' : k === 'notas' || k === 'resumen' ? `${CAMPOS[k] || k}` : `${CAMPOS[k] || k}: ${valorTxt(k, h.antes?.[k])} → ${valorTxt(k, h.despues[k])}`);
+  return `${quien} ${v('cambió', 'cambiaste')} ${h.tabla === 'talleres' ? '' : QUE[h.tabla] + ' · '}${det.join(' · ') || 'datos internos'}`;
+}
+function pHistorial(body, t) {
+  body.innerHTML = cargandoHtml('Cargando historial…');
+  S.api.historial({ taller_id: t.id, limite: 100 }).then(filas => {
+    if (actual !== t.id || pestana !== 'historial') return;
+    body.innerHTML = filas.length ? `<div class="timeline hist">${filas.map(h => `<div class="tl-i h-${h.accion}"><div class="tl-h"><b>${new Date(h.fecha).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}</b></div><p>${esc(textoHistorial(h))}</p></div>`).join('')}</div>`
+      : vacio('Aquí quedará anotado quién cambia qué en este taller.', 'Sin cambios todavía');
+  }).catch(e => { body.innerHTML = vacio(e.message, 'No se pudo cargar el historial'); });
 }

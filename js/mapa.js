@@ -3,9 +3,11 @@ import { S, on, emit, esAdmin, nombreDe, colorDe, comerciales, getRuta } from '.
 import { asignarTalleres } from './asignar.js';
 import { ponerFondo, ESTILOS, estiloActual, guardarEstilo } from './fondo.js';
 import { $, $$, esc, norm, css, hav, ESTADOS, REDES, TARJETA, estadoInfo, estadoTarjeta, redBadges, fmtFechaCorta, diasDesde, iniciales, debounce, toast, vacio } from './util.js';
+import { formacionDe } from './cursos.js';
+const FORMACION = [{ k: 'caducado', label: 'Técnicos caducados', v: '--bad' }, { k: 'vence_pronto', label: 'Vencen en 60 días', v: '--warn' }, { k: 'inscrito', label: 'Inscritos a un curso', v: '--st-potencial' }, { k: 'al_dia', label: 'Formación al día', v: '--ok' }, { k: 'sin_formacion', label: 'En Cursos, sin curso terminado', v: '--st-descartado' }, { k: '', label: 'No figura en Cursos', v: '--st-none' }];
 
 export let map = null;
-const F = { q: '', zona: '', prov: '', com: '', origen: '', estados: new Set(), redes: new Set(), sinVisita: false, tarjeta: false };
+const F = { q: '', zona: '', prov: '', com: '', origen: '', estados: new Set(), redes: new Set(), sinVisita: false, tarjeta: false, formacion: false };
 let colorModo = 'estado';
 let cerca = null; // {lat, lon}
 let visibles = [];
@@ -27,6 +29,7 @@ export function filtrar(t) {
   if (F.redes.size && !(t.redes || []).some(r => F.redes.has(r)) && !(F.redes.has('_') && !(t.redes || []).length)) return false;
   if (F.sinVisita) { const d = diasDesde(t.ultima_visita); if (d !== null && d < 90) return false; }
   if (F.tarjeta && !['caducada', 'd30', 'd90'].includes(estadoTarjeta(t).k)) return false;
+  if (F.formacion && !(formacionDe(t.id)?.porRenovar > 0)) return false;
   return true;
 }
 export const talleresVisibles = () => visibles;
@@ -35,6 +38,7 @@ function colorDeTaller(t) {
   if (colorModo === 'red') { const r = (t.redes || [])[0]; return css(r ? (REDES.find(x => x.k === r)?.v || '--r-none') : '--r-none'); }
   if (colorModo === 'comercial') return colorDe(t.comercial_id) || css('--st-none');
   if (colorModo === 'tarjeta') return css(TARJETA.find(x => x.k === estadoTarjeta(t).k).v);
+  if (colorModo === 'formacion') return css(FORMACION.find(x => x.k === (formacionDe(t.id)?.estado || '')).v);
   return css(estadoInfo(t.estado).v);
 }
 const radio = () => { const z = map.getZoom(); return z <= 6 ? 4.5 : z <= 8 ? 6 : z <= 11 ? 7.5 : 9; };
@@ -51,7 +55,7 @@ export function iniciarMapa() {
   nearLayer = L.layerGroup().addTo(map);
   map.on('zoomend', () => { const r = radio(); markers.forEach(m => m.setRadius(r)); pintarSeleccion(); });
   construirFiltros();
-  on('cambio', tablas => { if (tablas.some(t => ['talleres', 'perfiles'].includes(t))) { rellenarSelects(); refrescar(); } });
+  on('cambio', tablas => { if (tablas.some(t => ['talleres', 'perfiles'].includes(t))) { rellenarSelects(); refrescar(); } else if (tablas.includes('cursos') && colorModo === 'formacion') refrescar(); });
   on('seleccion', id => { seleccionado = id; pintarSeleccion(); renderLista(); });
   $$('[data-vista-mapa]').forEach(b => b.addEventListener('click', () => {
     const v = { es: [[35.9, -9.4], [43.8, 3.4]], pt: [[36.9, -9.6], [42.2, -6.1]], ic: [[27.6, -18.2], [29.5, -13.3]], bal: [[38.6, 1.1], [40.1, 4.4]] }[b.dataset.vistaMapa];
@@ -94,9 +98,10 @@ function construirFiltros() {
   $('#fComTop').addEventListener('change', e => ponCom(e.target.value));
   $('#fOrigen').addEventListener('change', e => { F.origen = e.target.value; refrescar(); });
   $('#fSinVisita').addEventListener('change', e => { F.sinVisita = e.target.checked; refrescar(); });
+  $('#fFormacion').addEventListener('change', e => { F.formacion = e.target.checked; if (F.formacion && ['estado', 'comercial'].includes(colorModo)) { colorModo = 'formacion'; $('#colorModo').value = 'formacion'; leyenda(); } refrescar(); });
   $('#fTarjeta').addEventListener('change', e => { F.tarjeta = e.target.checked; if (F.tarjeta && colorModo === 'estado') { colorModo = 'tarjeta'; $('#colorModo').value = 'tarjeta'; leyenda(); } refrescar(); });
   $('#fLimpiar').addEventListener('click', () => {
-    Object.assign(F, { q: '', zona: '', prov: '', com: '', origen: '', sinVisita: false, tarjeta: false }); F.estados.clear(); F.redes.clear(); $('#fTarjeta').checked = false;
+    Object.assign(F, { q: '', zona: '', prov: '', com: '', origen: '', sinVisita: false, tarjeta: false, formacion: false }); F.estados.clear(); F.redes.clear(); $('#fTarjeta').checked = false; $('#fFormacion').checked = false;
     $('#fQ').value = ''; $('#fSinVisita').checked = false; $$('.tog', $('#filtros')).forEach(b => b.setAttribute('aria-pressed', 'false'));
     rellenarSelects(); refrescar();
   });
@@ -167,12 +172,16 @@ function renderLista() {
       <span class="dot" style="background:var(${e.v})"></span>
       <span class="nm">${esc(t.nombre)}</span>
       <span class="rt">${com}<button class="icon" data-ruta="${esc(t.id)}" aria-label="${enRuta ? 'Quitar de la ruta' : 'Añadir a la ruta'}" title="${enRuta ? 'Quitar de la ruta' : 'Añadir a la ruta'}">${enRuta ? '✓' : '+'}</button></span>
-      <span class="sub">${d != null ? `<b>${d < 10 ? d.toFixed(1) : Math.round(d)} km</b> · ` : ''}${esc(t.poblacion || '')}${t.provincia && t.provincia !== t.poblacion ? ' · ' + esc(t.provincia) : ''}${t.ultima_visita ? ' · visitado ' + fmtFechaCorta(t.ultima_visita) : ''} ${redBadges(t.redes)}${t.origen === 'kmz' ? ' <span class="badge src">No figura en el registro</span>' : ''}${tjBadge(t)}</span>
+      <span class="sub">${d != null ? `<b>${d < 10 ? d.toFixed(1) : Math.round(d)} km</b> · ` : ''}${esc(t.poblacion || '')}${t.provincia && t.provincia !== t.poblacion ? ' · ' + esc(t.provincia) : ''}${t.ultima_visita ? ' · visitado ' + fmtFechaCorta(t.ultima_visita) : ''} ${redBadges(t.redes)}${t.origen === 'kmz' ? ' <span class="badge src">No figura en el registro</span>' : ''}${tjBadge(t)}${foBadge(t)}</span>
     </div>`;
   }).join('') || (S.talleres.size ? vacio('Prueba a quitar algún filtro o a buscar otra cosa.', 'Ningún taller cumple estos filtros')
     : (esAdmin() ? vacio('Cárgalos desde Gestión → Datos.', 'Todavía no hay talleres') : vacio('Cuando la dirección te asigne una zona, aparecerán aquí y en el mapa. Mientras, puedes añadir talleres tú mismo.', 'Todavía no tienes talleres asignados')));
 }
 
+function foBadge(t) {
+  const f = formacionDe(t.id); if (!f?.porRenovar) return '';
+  return ` <span class="badge tjb${f.r.caducado ? ' caducada' : ''}">${f.porRenovar} ${f.porRenovar === 1 ? 'técnico' : 'técnicos'} por renovar</span>`;
+}
 function tjBadge(t) {
   const { k, dias } = estadoTarjeta(t);
   if (k === 'caducada') return ' <span class="badge tjb caducada">Tarjeta caducada</span>';
@@ -234,6 +243,7 @@ function leyenda(max) {
   let h = '';
   if (colorModo === 'estado') h = ESTADOS.map(e => `<div class="row"><span class="sw" style="background:var(${e.v})"></span>${e.label}</div>`).join('');
   else if (colorModo === 'red') h = REDES.map(r => `<div class="row"><span class="sw" style="background:var(${r.v})"></span>${r.label}</div>`).join('') + '<div class="row"><span class="sw" style="background:var(--r-none)"></span>Sin red conocida</div>';
+  else if (colorModo === 'formacion') h = FORMACION.map(x => `<div class="row"><span class="sw" style="background:var(${x.v})"></span>${x.label}</div>`).join('');
   else if (colorModo === 'tarjeta') h = TARJETA.map(x => `<div class="row"><span class="sw" style="background:var(${x.v})"></span>${x.label}</div>`).join('');
   else h = comerciales().map(p => `<div class="row"><span class="sw" style="background:${esc(p.color)}"></span>${esc(p.nombre)}</div>`).join('') + '<div class="row"><span class="sw" style="background:var(--st-none)"></span>Sin comercial</div>';
   const modo = $('#capaProv').value;

@@ -1,5 +1,5 @@
 // Asignar muchos talleres de golpe (una provincia, una comunidad o la lista filtrada)
-import { comerciales, nombreDe, guardarVarios } from './store.js';
+import { comerciales, nombreDe, guardarVarios, guardarVariosConDeshacer } from './store.js';
 import { esc, modal, toast, fmtNum } from './util.js';
 
 export function asignarTalleres(talleres, titulo) {
@@ -36,8 +36,8 @@ export function asignarTalleres(talleres, titulo) {
     const com = f.com.value || null, ids = elegidos().map(t => t.id);
     const b = f.querySelector('[type=submit]'); b.disabled = true; b.textContent = 'Asignando…';
     try {
-      const n = await guardarVarios('talleres', ids, { comercial_id: com });
-      toast(`${fmtNum(n)} talleres ${com ? 'asignados a ' + nombreDe(com) : 'sin comercial'}`); close();
+      close();
+      await guardarVariosConDeshacer('talleres', ids, { comercial_id: com }, `${fmtNum(ids.length)} talleres ${com ? 'asignados a ' + nombreDe(com) : 'sin comercial'}`);
     } catch (err) { toast(err.message, 'error'); b.disabled = false; b.textContent = 'Asignar'; }
   });
 }

@@ -10,7 +10,12 @@ export const S = {
   ventas: new Map(),
   equipos: new Map(),
   fechaRegistro: '',
-  online: true
+  online: true,
+  // copia de Cursos
+  centros: new Map(),      // centro de Cursos por id
+  tecnicos: new Map(),     // lista de técnicos por centro de Cursos
+  vinculos: new Map(),     // unión centro de Cursos → taller, por centro
+  ajustes: new Map()
 };
 
 // ---- eventos internos ----
@@ -55,6 +60,11 @@ export function suscribir() {
       S.online = ev === 'SUBSCRIBED'; emit('conexion', S.online);
       return;
     }
+    if (tabla === 'vinculos_cursos') {
+      if (ev === 'DELETE') S.vinculos.delete(viejo?.centro_id); else if (nuevo?.centro_id) S.vinculos.set(nuevo.centro_id, nuevo);
+      avisar('cursos'); return;
+    }
+    if (tabla === 'ajustes') { if (nuevo?.clave) S.ajustes.set(nuevo.clave, nuevo); avisar('cursos'); return; }
     const m = S[tabla]; if (!m) return;
     if (ev === 'DELETE') m.delete(viejo?.id);
     else if (nuevo?.id) {
@@ -96,6 +106,28 @@ export async function guardarVarios(tabla, ids, patch) {
   avisar(tabla); return rows.length;
 }
 export { cambiado };
+
+// ---- deshacer: el aviso trae un botón que devuelve las cosas a como estaban ----
+export async function guardarConDeshacer(tabla, id, patch, msg) {
+  const fila = S[tabla]?.get(id); const antes = {};
+  for (const k of Object.keys(patch)) antes[k] = fila ? fila[k] ?? null : null;
+  const r = await guardar(tabla, id, patch);
+  if (fila && Object.keys(patch).some(k => JSON.stringify(antes[k]) !== JSON.stringify(patch[k] ?? null)))
+    toast(msg, '', { deshacer: () => guardar(tabla, id, antes) });
+  return r;
+}
+export async function borrarConDeshacer(tabla, id, msg, fila = S[tabla]?.get(id)) {
+  if (S[tabla]) await borrar(tabla, id); else await S.api.remove(tabla, id);
+  if (fila) toast(msg, '', { deshacer: async () => { const { ultima_visita, ...copia } = fila; return crear(tabla, copia); } });
+}
+// Cambios en bloque (asignaciones): se deshacen devolviendo a cada taller su valor anterior
+export async function guardarVariosConDeshacer(tabla, ids, patch, msg) {
+  const previos = new Map();
+  for (const id of ids) { const f = S[tabla].get(id); const k = JSON.stringify(Object.fromEntries(Object.keys(patch).map(c => [c, f?.[c] ?? null]))); if (!previos.has(k)) previos.set(k, []); previos.get(k).push(id); }
+  const n = await guardarVarios(tabla, ids, patch);
+  toast(msg, '', { deshacer: async () => { for (const [k, grupo] of previos) await guardarVarios(tabla, grupo, JSON.parse(k)); } });
+  return n;
+}
 
 // ---- ruta del día (se guarda en este dispositivo, por usuario) ----
 export function getRuta() { try { return JSON.parse(localStorage.getItem('ruta:' + S.yo?.id) || '[]'); } catch (e) { return []; } }

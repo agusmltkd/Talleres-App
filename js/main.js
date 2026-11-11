@@ -1,5 +1,6 @@
 // Arranque: modo, inicio de sesión, navegación
-import { crearApi, supabaseConfigurado, claveSecreta } from './api.js';
+import { crearApi, supabaseConfigurado, claveSecreta, PRACTICA } from './api.js';
+import { recargarCursos, sincronizarSiToca } from './cursos.js';
 import { S, on, emit, cargarTodo, suscribir, esAdmin } from './store.js';
 import { $, $$, esc, toast, modal, iniciales, marcaHtml } from './util.js';
 import { NOMBRE_APP } from './config.js';
@@ -20,13 +21,18 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.se
 async function arrancar() {
   const params = new URLSearchParams(location.search);
   if (claveSecreta && !params.has('demo')) return pantallaError('En js/config.js se ha pegado la clave SECRETA de Supabase. Cámbiala por la clave pública (publishable/anon) antes de publicar: la secreta da acceso total a los datos.');
-  const modo = params.has('demo') || !supabaseConfigurado ? 'demo' : 'supabase';
+  const modo = PRACTICA || params.has('demo') || !supabaseConfigurado ? 'demo' : 'supabase';
   try { S.api = await crearApi(modo); }
   catch (e) { pantallaError('No se pudo conectar con el servidor. Revisa tu conexión y recarga.'); return; }
   if (modo === 'supabase') S.api.onAuth((ev) => {
     if (ev === 'PASSWORD_RECOVERY') pedirNuevaClave(true);
     if (ev === 'SIGNED_OUT') location.reload();
   });
+  if (PRACTICA) {
+    document.documentElement.classList.add('practica');
+    document.body.insertAdjacentHTML('afterbegin', `<div class="banda-practica" role="status"><b>MODO PRÁCTICA</b><span>Puedes probarlo todo: nada de lo que hagas aquí se guarda ni lo ve nadie.</span><a href="${location.pathname}">Volver a la aplicación</a></div>`);
+    if (!(await S.api.sesion())) await S.api.entrar(params.get('practica') === 'admin' ? 'demo-admin' : 'demo-com-1');
+  }
   const sesion = await S.api.sesion();
   if (!sesion) return pantallaLogin(modo);
   await entrarEnApp();
@@ -97,6 +103,7 @@ async function entrarEnApp() {
     if (!S.yo.activo) { pantallaError('Tu usuario está desactivado. Habla con la dirección de la empresa.'); return; }
     try { S.fechaRegistro = (await fetch('data/talleres.json').then(r => r.json())).fecha_registro; } catch (e) {}
     await cargarTodo();
+    await recargarCursos();
   } catch (e) { pantallaError(e.message); return; }
   $('#cargando').hidden = true; $('#app').hidden = false;
   document.body.classList.toggle('es-admin', esAdmin());
@@ -109,6 +116,7 @@ async function entrarEnApp() {
   on('cambio', t => { if (t.includes('perfiles')) pintarUsuario(); });
   window.addEventListener('hashchange', irA);
   irA();
+  sincronizarSiToca();
   $('#exportLista').addEventListener('click', () => exportarExcel(talleresVisibles()));
   $('#nuevoTaller').addEventListener('click', nuevoTaller);
   $('#btnNuevo').addEventListener('click', nuevoTaller);
@@ -133,6 +141,7 @@ $('#yo').addEventListener('click', () => {
     <p class="note">${esc(S.yo.email || '')}</p>
     <label class="field"><span>Tu nombre en la aplicación</span><input id="miNombre" value="${esc(S.yo.nombre)}" maxlength="60"></label>
     <div class="btns"><button class="btn" id="guardaNombre">Guardar nombre</button>${demo ? '' : '<button class="btn" id="cambiaClave">Cambiar contraseña</button>'}</div>
+    ${S.api.practica ? '' : `<div class="aviso info"><span><b>Modo práctica.</b> Una copia de la aplicación para aprender o enseñarla a alguien nuevo, con talleres y técnicos de ejemplo. Nada de lo que hagas allí toca los datos reales.</span><div class="btns"><a class="btn" href="${location.pathname}?practica=${S.yo.rol === 'admin' ? 'admin' : 'comercial'}" target="_blank" rel="noopener">Abrir modo práctica</a></div></div>`}
     <div class="btns">${demo ? '<button class="btn" id="otroUsuario">Entrar con otro usuario</button><button class="btn danger" id="reiniciaDemo">Borrar los datos de la demo</button>' : '<button class="btn danger" id="salir">Cerrar sesión</button>'}</div>`);
   el.querySelector('#guardaNombre').onclick = async () => { const n = el.querySelector('#miNombre').value.trim(); if (!n) return; await S.api.update('perfiles', S.yo.id, { nombre: n }); S.yo.nombre = n; S.perfiles.set(S.yo.id, { ...S.perfiles.get(S.yo.id), nombre: n }); pintarUsuario(); toast('Nombre guardado'); close(); };
   el.querySelector('#cambiaClave')?.addEventListener('click', () => { close(); pedirNuevaClave(false); });

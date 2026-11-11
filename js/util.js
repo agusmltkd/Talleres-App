@@ -7,13 +7,22 @@ export const css = n => getComputedStyle(document.documentElement).getPropertyVa
 export const debounce = (fn, ms = 150) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 export const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2));
 
-export function toast(msg, kind = '') {
+export function toast(msg, kind = '', { deshacer = null } = {}) {
   const pila = document.getElementById('pila') || document.body;
   const t = document.createElement('div');
-  t.className = 'toast ' + kind; t.textContent = msg; t.setAttribute('role', 'status');
+  const dura = deshacer ? 7000 : 3200;
+  t.className = 'toast ' + kind + (deshacer ? ' con-boton' : ''); t.setAttribute('role', 'status');
+  t.style.setProperty('--dura', dura + 'ms');
+  t.innerHTML = `<span>${esc(msg)}</span>${deshacer ? '<button type="button">Deshacer</button>' : ''}`;
+  let fuera = false;
+  const quitar = () => { if (fuera) return; fuera = true; t.classList.add('fuera'); setTimeout(() => t.remove(), 260); };
+  if (deshacer) t.querySelector('button').addEventListener('click', async e => {
+    e.currentTarget.disabled = true;
+    try { await deshacer(); quitar(); toast('Cambio deshecho'); } catch (err) { quitar(); toast(err.message || 'No se pudo deshacer', 'error'); }
+  });
   pila.appendChild(t);
   while (pila.children.length > 3) pila.firstElementChild.remove();
-  setTimeout(() => { t.classList.add('fuera'); setTimeout(() => t.remove(), 260); }, 3200);
+  setTimeout(quitar, dura);
 }
 
 // Estado vacío con el disco de tacógrafo dibujado (como en Adiestramientos)
@@ -70,6 +79,7 @@ export const PRECISION = {
   zona: 'Zona del código postal', loc: 'Centro de la localidad'
 };
 export const TIPOS_VISITA = { visita: 'Visita', llamada: 'Llamada', email: 'Email', otro: 'Otro' };
+export const RESULTADOS = { interesado: 'Interesado', presupuesto: 'Pide presupuesto', pedido: 'Hace pedido', sin_interes: 'Sin interés', no_estaba: 'No estaba', otro: 'Otro' };
 export const TIPOS_EQUIPO = ['Banco de pruebas', 'Equipo de calibración', 'Descargador de datos', 'Software de gestión', 'Tacógrafo', 'Limitador de velocidad', 'Otro'];
 export const COLORES = ['#1f7f4a', '#c2410c', '#6d28d9', '#15803d', '#b91c1c', '#1d4ed8', '#a16207', '#be185d', '#0e7490', '#4d7c0f', '#7c2d12', '#334155'];
 
