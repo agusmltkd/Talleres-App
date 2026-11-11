@@ -12,7 +12,7 @@ export const claveSecreta = (() => {
 })();
 
 export const TABLAS = ['perfiles', 'talleres', 'contactos', 'visitas', 'ventas', 'equipos'];
-const EXTRA = ['cursos_centros', 'cursos_tecnicos', 'vinculos_cursos', 'ajustes', 'duplicados_ignorados', 'historial'];
+const EXTRA = ['cursos_centros', 'cursos_tecnicos', 'vinculos_cursos', 'ajustes', 'duplicados_ignorados', 'historial', 'desplazamientos'];
 
 function mensaje(error) {
   const m = String(error?.message || error || '');
@@ -223,8 +223,8 @@ function practicaDeEjemplo(db) {
     t.comercial_id = com; i++;
     t.estado = ['cliente', 'potencial', 'potencial', 'cliente', '', 'competencia', '', 'cliente'][i % 8];
     if (t.estado === 'cliente' && i % 3) {
-      db.visitas.push({ id: uid(), taller_id: t.id, comercial_id: com, fecha: dia(-20 - (i % 150)), hora: null, tipo: 'visita', estado: 'hecha', resultado: 'interesado', resumen: 'Visita de ejemplo', proximo_paso: '', creado: new Date().toISOString(), creado_por: com });
-      t.ultima_visita = dia(-20 - (i % 150));
+      db.visitas.push({ id: uid(), taller_id: t.id, comercial_id: com, fecha: dia(-1 - (i % 40)), hora: null, tipo: 'visita', estado: 'hecha', resultado: 'interesado', resumen: 'Visita de ejemplo', proximo_paso: '', creado: new Date().toISOString(), creado_por: com });
+      t.ultima_visita = dia(-1 - (i % 40));
     }
     if (i % 23 === 0) db.visitas.push({ id: uid(), taller_id: t.id, comercial_id: com, fecha: i % 2 ? hoy : dia(2), hora: '10:00', tipo: 'visita', estado: 'planificada', resultado: '', resumen: 'Cita de ejemplo', proximo_paso: '', creado: new Date().toISOString(), creado_por: com });
     if (i % 17 === 0) db.ventas.push({ id: uid(), taller_id: t.id, comercial_id: com, fecha: dia(-10), tipo: 'presupuesto', estado: 'abierto', concepto: 'Banco de pruebas (ejemplo)', importe: 4800, notas: null, creado: new Date().toISOString(), creado_por: com });

@@ -590,6 +590,22 @@ html.practica .ficha { top: calc(var(--top-h) + 36px); }
 .plegable summary { cursor: pointer; font-weight: 600; font-size: 13.5px; }
 .lista-simple { margin: 8px 0 2px; padding-left: 18px; display: grid; gap: 3px; font-size: 13.5px; max-height: 260px; overflow: auto; }
 
+/* ---------- kilómetros ---------- */
+.sub-tabs { display: inline-grid; grid-auto-flow: column; background: #fff; border: 1px solid var(--linea); border-radius: 12px; padding: 3px; gap: 3px; }
+.sub-tabs [role=tab] { border: 0; background: transparent; border-radius: 9px; min-height: 34px; padding: 0 14px; font-weight: 600; font-size: 13.5px; color: var(--gris); cursor: pointer; }
+.sub-tabs [role=tab][aria-checked=true] { background: var(--verde-suave); color: var(--verde-osc); }
+.km-vista { max-width: 1100px; margin: 0 auto; display: grid; gap: 16px; }
+.km-vista .cifras { margin: 0; }
+.km-cab select { width: auto; min-width: 200px; }
+.km-com { gap: 8px; }
+.km-com .ch-t { display: flex; align-items: center; gap: 4px; }
+.km-tot { font-size: 14px; color: var(--gris); }
+.km-tot b { font-family: var(--f-tit); font-stretch: 112%; font-size: 18px; color: var(--tinta); }
+table.km td { vertical-align: top; }
+table.km td.nw { white-space: nowrap; }
+.km-in { width: 90px; min-height: 32px; text-align: right; padding: 0 8px; }
+@media (max-width: 640px) { table.km td.nw { white-space: normal; } .km-in { width: 70px; } }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .disco-carga::after { animation: aguja 3s linear infinite !important; }

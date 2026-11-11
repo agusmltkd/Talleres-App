@@ -242,3 +242,24 @@ end $$;
 -- Resultado rápido de la visita
 alter table public.visitas add column if not exists resultado text not null default ''
   check (resultado in ('', 'interesado', 'presupuesto', 'pedido', 'sin_interes', 'no_estaba', 'otro'));
+
+-- ---------------------------------------------------------------------
+-- Kilómetros: punto de partida de cada comercial y correcciones por día
+-- ---------------------------------------------------------------------
+alter table public.perfiles add column if not exists base jsonb;
+create table if not exists public.desplazamientos (
+  id           uuid primary key default gen_random_uuid(),
+  comercial_id uuid not null references public.perfiles(id) on delete cascade,
+  fecha        date not null,
+  km           numeric(7, 1) not null check (km >= 0 and km < 5000),
+  nota         text not null default '',
+  creado       timestamptz not null default now(),
+  unique (comercial_id, fecha)
+);
+alter table public.desplazamientos enable row level security;
+revoke all on public.desplazamientos from anon;
+grant select, insert, update, delete on public.desplazamientos to authenticated;
+drop policy if exists desplazamientos_propios on public.desplazamientos;
+create policy desplazamientos_propios on public.desplazamientos for all to authenticated
+  using (public.es_admin() or (public.es_activo() and comercial_id = auth.uid()))
+  with check (public.es_admin() or (public.es_activo() and comercial_id = auth.uid()));

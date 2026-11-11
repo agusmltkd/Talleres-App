@@ -1,8 +1,9 @@
 // Panel de resultados
 import { S, on, esAdmin, comerciales } from './store.js';
 import { $, esc, hoy, addDays, fmtEur, fmtNum, diasDesde, ESTADOS, estadoTarjeta, vacio } from './util.js';
+import { renderKilometros } from './kilometros.js';
 
-let periodo = 'mes', quien = null;
+let periodo = 'mes', quien = null, sub = 'resumen';
 
 export function iniciarPanel() {
   on('vista', v => { if (v === 'panel') render(); });
@@ -11,6 +12,7 @@ export function iniciarPanel() {
     if (e.target.id === 'pPeriodo') { periodo = e.target.value; render(); }
     if (e.target.id === 'pQuien') { quien = e.target.value; render(); }
   });
+  $('#v-panel').addEventListener('click', e => { const b = e.target.closest('[data-sub]'); if (b) { sub = b.dataset.sub; render(); } });
 }
 
 function rango() {
@@ -51,9 +53,17 @@ function render() {
   const nombrePeriodo = { mes: 'este mes', '30': 'los últimos 30 días', trimestre: 'este trimestre', ano: 'este año', todo: 'desde el principio' }[periodo];
   const quienTxt = sel ? (sel === S.yo.id ? 'Tus resultados' : 'Resultados de ' + (S.perfiles.get(sel)?.nombre || '')) : 'Resultados de todo el equipo';
   const pctCli = talleres.length ? Math.round(100 * clientes.length / talleres.length) : 0;
+  const subTabs = `<div class="seg sub-tabs" role="tablist">${[['resumen', 'Resumen'], ['km', 'Kilómetros']].map(([k, l]) => `<button type="button" role="tab" data-sub="${k}" aria-checked="${sub === k}" aria-selected="${sub === k}">${l}</button>`).join('')}</div>`;
+  if (sub === 'km') {
+    $('#v-panel').innerHTML = `<div class="cab-vista"><div><h1>Resultados</h1><p>${admin ? (sel ? 'Kilómetros de ' + esc(S.perfiles.get(sel)?.nombre || '') : 'Kilómetros de todo el equipo') : 'Tus kilómetros'} por mes.</p></div><span class="esp"></span>${subTabs}
+      ${admin ? `<select id="pQuien" aria-label="Comercial"><option value="">Todo el equipo</option>${coms.map(p => `<option value="${esc(p.id)}"${p.id === sel ? ' selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select>` : ''}</div>
+      <div class="km-vista" id="kmBox"></div>`;
+    renderKilometros($('#kmBox'), sel);
+    return;
+  }
   $('#v-panel').innerHTML = `
     <div class="cab-vista">
-      <div><h1>Resultados</h1><p>${esc(quienTxt)}, ${esc(nombrePeriodo)}.</p></div><span class="esp"></span>
+      <div><h1>Resultados</h1><p>${esc(quienTxt)}, ${esc(nombrePeriodo)}.</p></div><span class="esp"></span>${subTabs}
       <select id="pPeriodo" aria-label="Periodo">${[['mes', 'Este mes'], ['30', 'Últimos 30 días'], ['trimestre', 'Este trimestre'], ['ano', 'Este año'], ['todo', 'Desde el principio']].map(([k, l]) => `<option value="${k}"${k === periodo ? ' selected' : ''}>${l}</option>`).join('')}</select>
       ${admin ? `<select id="pQuien" aria-label="Comercial"><option value="">Todo el equipo</option>${coms.map(p => `<option value="${esc(p.id)}"${p.id === sel ? ' selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select>` : ''}
     </div>

@@ -95,6 +95,7 @@ function resumen(body, t) {
       <button class="btn" id="rutaBtn">${enRuta ? 'Quitar de la ruta' : 'Añadir a la ruta'}</button>
       <a class="btn" href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" rel="noopener">Ver en Google Maps</a>
       <a class="btn" href="https://www.google.com/maps/dir/?api=1&destination=${t.precision === 'exacta' || t.precision === 'manual' ? t.lat + ',' + t.lon : q}" target="_blank" rel="noopener">Cómo llegar</a>
+      ${t.precision === 'exacta' || t.precision === 'manual' ? `<a class="btn" href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${t.lat},${t.lon}" target="_blank" rel="noopener">Ver fachada</a>` : ''}
       ${t.telefono ? `<a class="btn" href="tel:${esc(t.telefono.replace(/\s/g, ''))}">Llamar</a>` : ''}
       ${t.email ? `<a class="btn" href="mailto:${esc(t.email)}">Escribir</a>` : ''}
     </div>

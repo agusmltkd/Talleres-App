@@ -5,6 +5,7 @@ import { SUPABASE_URL } from './config.js';
 import { buscarDireccion } from './geocodificar.js';
 import { asignarTalleres } from './asignar.js';
 import { renderCursos, renderRegistro, renderDuplicados, renderActividad } from './gestion.js';
+import { precioKm } from './kilometros.js';
 
 const XLSX_URL = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
 let geoParar = false, geoEnMarcha = false;
@@ -98,6 +99,8 @@ function render() {
           <div><h3 class="ch-t">Ubicación exacta</h3><p class="note">${fmtNum(aprox)} talleres están situados en el centro de su código postal. Este proceso busca su dirección real en OpenStreetMap, uno por segundo (unos ${Math.ceil(aprox / 55)} minutos). Puedes pararlo y seguir otro día.</p>
             <div class="btns"><button class="btn primary" id="geoGo" ${aprox ? '' : 'disabled'}>${geoEnMarcha ? 'Buscando…' : 'Buscar direcciones exactas'}</button><button class="btn" id="geoStop" ${geoEnMarcha ? '' : 'hidden'}>Parar</button></div>
             <div class="progress" id="geoBar" hidden><i></i></div><p class="note" id="geoMsg"></p></div>
+          <div><h3 class="ch-t">Kilometraje</h3><p class="note">Precio por kilómetro para el informe de Resultados → Kilómetros. Por defecto 0,26 €/km, lo que Hacienda deja sin tributar.</p>
+            <form class="btns" id="precioKm"><input type="number" name="euros" min="0" max="5" step="0.01" value="${precioKm()}" style="width:110px" aria-label="Euros por kilómetro"><span class="note">€/km</span><button class="btn" type="submit">Guardar</button></form></div>
           <div><h3 class="ch-t">Excel</h3><p class="note">Exporta todo (talleres, visitas, ventas, equipos y contactos) o importa una lista de talleres o clientes. Al importar, se reconocen columnas como Nombre, CIF, Dirección, CP, Población, Teléfono, Email, Estado, Comercial y Notas.</p>
             <div class="btns"><button class="btn primary" id="expTodo">Exportar todo a Excel</button><label class="btn" for="impFile">Importar Excel…</label><input type="file" id="impFile" accept=".xlsx,.xls,.csv" hidden></div><div id="impPrev"></div></div>
         </div>
@@ -120,6 +123,11 @@ function render() {
   renderRegistro($('#registroBox'), { aplicar: async () => { await cargarIniciales(); await actualizarOficiales(); } });
   renderDuplicados($('#dupBox'));
   renderActividad($('#actBox'));
+  $('#precioKm').addEventListener('submit', async e => {
+    e.preventDefault(); const euros = Math.round(Number(e.target.euros.value) * 100) / 100;
+    if (!(euros >= 0)) return;
+    try { await S.api.upsertPor('ajustes', { clave: 'precio_km', valor: { euros } }, 'clave'); S.ajustes.set('precio_km', { clave: 'precio_km', valor: { euros } }); toast(`Precio guardado: ${String(euros).replace('.', ',')} €/km`); } catch (x) { toast(x.message, 'error'); }
+  });
   // datos iniciales
   $('#cargarIni').addEventListener('click', cargarIniciales);
   confirmBtn($('#actOficial'), actualizarOficiales, 'Pulsa otra vez para actualizar');

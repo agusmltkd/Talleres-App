@@ -1,5 +1,5 @@
 // Ruta de visitas: orden optimizado, distancias aproximadas y enlaces a Google Maps
-import { S, on, emit, getRuta, setRuta, esAdmin, comerciales, nombreDe } from './store.js';
+import { S, on, emit, getRuta, setRuta, esAdmin, comerciales, nombreDe, guardar } from './store.js';
 import { $, esc, hav, css, toast, vacio, modal, hoy, addDays, diasDesde, estadoTarjeta, fmtFechaCorta, fmtEur } from './util.js';
 import { formacionDe } from './cursos.js';
 import { ubicacionActual } from './mapa.js';
@@ -26,6 +26,10 @@ export function iniciarRuta() {
     else if (b.id === 'rOpt') optimizar();
     else if (b.id === 'rVaciar') { const antes = getRuta(); setRuta([]); toast('Ruta vaciada', '', { deshacer: () => setRuta(antes) }); }
     else if (b.id === 'rProponer') proponer();
+    else if (b.id === 'rBase') {
+      const base = { lat: salida.lat, lon: salida.lon, etiqueta: salida.etiqueta === 'Mi ubicación' ? 'su ubicación guardada' : salida.etiqueta };
+      try { await guardar('perfiles', S.yo.id, { base }); S.yo = { ...S.yo, base }; toast('Punto de partida guardado: se usa para calcular tus kilómetros'); render(); } catch (err) { /* el aviso ya sale */ }
+    }
     else if (b.id === 'rAqui') {
       const u = ubicacionActual();
       if (u) { fijarSalida({ ...u, etiqueta: 'Mi ubicación' }); return; }
@@ -70,7 +74,9 @@ function optimizar() {
   setRuta(orden.map(t => t.id)); toast('Orden optimizado');
 }
 
+function mismaBase() { const b = S.yo?.base; return !!b && !!salida && Math.abs(b.lat - salida.lat) < 1e-5 && Math.abs(b.lon - salida.lon) < 1e-5; }
 function render() {
+  if (!salida && S.yo?.base) salida = { ...S.yo.base };
   const ps = paradas(), seq = secuencia(ps);
   const dist = km(seq) * 1.3, horas = dist / 70 + ps.length * 0.75;
   const addr = t => t.precision === 'exacta' || t.precision === 'manual' ? `${t.lat},${t.lon}` : `${t.nombre}, ${t.direccion || ''}, ${t.cp || ''} ${t.poblacion || ''}`;
@@ -100,7 +106,7 @@ function render() {
           <label class="field"><span>Salida (código postal)</span><input id="rCP" inputmode="numeric" maxlength="5" placeholder="Ej. 41500" value="${salida?.etiqueta?.startsWith('CP ') ? esc(salida.etiqueta.slice(3)) : ''}"></label>
           <div class="field"><span>Punto de salida</span><div class="btns"><button class="btn" id="rAqui">Usar mi ubicación</button></div></div>
         </div>
-        <p class="note">${salida ? 'Salida: ' + esc(salida.etiqueta) : 'Sin punto de salida: se empieza en el primer taller.'}</p>
+        <p class="note">${salida ? 'Salida: ' + esc(salida.etiqueta) : 'Sin punto de salida: se empieza en el primer taller.'}${salida && !mismaBase() ? ' · <button class="linklike" id="rBase">Guardar como mi punto de partida</button>' : salida ? ' · tu punto de partida habitual' : ''}</p>
         <label class="note chk"><input type="checkbox" id="rVuelta" ${vuelta() ? 'checked' : ''}> Volver al punto de salida</label>
         <div class="kpis3"><div><span>Paradas</span><b>${ps.length}</b></div><div><span>Kilómetros aprox.</span><b>${Math.round(dist)}</b></div><div><span>Jornada aprox.</span><b>${ps.length ? `${h} h ${String(mnt).padStart(2, '0')}` : '—'}</b><small>con 45 min por visita</small></div></div>
         <div class="stops">${ps.map((t, i) => `<div class="stop"><span class="num">${i + 1}</span><div class="grow"><button class="linklike" data-ver="${esc(t.id)}">${esc(t.nombre)}</button><div class="note">${esc(t.poblacion || '')} · ${esc(t.provincia || '')}</div>${motivos.get(t.id) ? `<div class="motivos">${motivos.get(t.id).map(m => `<span>${esc(m)}</span>`).join('')}</div>` : ''}</div>
