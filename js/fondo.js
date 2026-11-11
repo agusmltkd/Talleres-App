@@ -10,10 +10,10 @@ export const ESTILOS = [
   { k: 'claro', label: 'Claro', url: 'https://tiles.openfreemap.org/styles/positron' },
   { k: 'oscuro', label: 'Oscuro', url: 'https://tiles.openfreemap.org/styles/dark' }
 ];
-const oscuroDelSistema = () => matchMedia?.('(prefers-color-scheme: dark)').matches;
+
 export function estiloActual() {
   try { const e = localStorage.getItem('mapa-estilo'); if (ESTILOS.some(x => x.k === e)) return e; } catch (e) {}
-  return oscuroDelSistema() ? 'oscuro' : 'calles';
+  return 'calles';
 }
 export function guardarEstilo(k) { try { localStorage.setItem('mapa-estilo', k); } catch (e) {} }
 

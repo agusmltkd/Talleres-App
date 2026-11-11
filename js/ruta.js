@@ -1,6 +1,6 @@
 // Ruta de visitas: orden optimizado, distancias aproximadas y enlaces a Google Maps
 import { S, on, emit, getRuta, setRuta } from './store.js';
-import { $, esc, hav, css, toast } from './util.js';
+import { $, esc, hav, css, toast, vacio } from './util.js';
 import { ubicacionActual } from './mapa.js';
 import { ponerFondo } from './fondo.js';
 
@@ -87,6 +87,7 @@ function render() {
   }
   const h = Math.floor(horas), mnt = Math.round((horas - h) * 60);
   $('#v-ruta').innerHTML = `
+    <div class="cab-vista"><div><h1>Ruta</h1><p>${ps.length ? `${ps.length} ${ps.length === 1 ? 'parada' : 'paradas'} · unos ${Math.round(dist)} km` : 'Prepara el recorrido del día y ábrelo en Google Maps.'}</p></div></div>
     <div class="ruta">
       <section class="panel">
         <h2 class="cap">Ruta de visitas</h2>
@@ -99,7 +100,7 @@ function render() {
         <label class="note chk"><input type="checkbox" id="rVuelta" ${vuelta() ? 'checked' : ''}> Volver al punto de salida</label>
         <div class="kpis3"><div><span>Paradas</span><b>${ps.length}</b></div><div><span>Kilómetros aprox.</span><b>${Math.round(dist)}</b></div><div><span>Jornada aprox.</span><b>${ps.length ? `${h} h ${String(mnt).padStart(2, '0')}` : '—'}</b><small>con 45 min por visita</small></div></div>
         <div class="stops">${ps.map((t, i) => `<div class="stop"><span class="num">${i + 1}</span><div class="grow"><button class="linklike" data-ver="${esc(t.id)}">${esc(t.nombre)}</button><div class="note">${esc(t.poblacion || '')} · ${esc(t.provincia || '')}</div></div>
-          <div class="btns sm nowrap"><button class="icon" data-up="${i}" aria-label="Subir">↑</button><button class="icon" data-down="${i}" aria-label="Bajar">↓</button><button class="icon" data-del="${i}" aria-label="Quitar">×</button></div></div>`).join('') || '<p class="note">La ruta está vacía.</p>'}</div>
+          <div class="btns sm nowrap"><button class="icon" data-up="${i}" aria-label="Subir">↑</button><button class="icon" data-down="${i}" aria-label="Bajar">↓</button><button class="icon" data-del="${i}" aria-label="Quitar">×</button></div></div>`).join('') || vacio('Añade talleres con el botón + de la lista o desde su ficha.', 'La ruta está vacía')}</div>
         <div class="btns"><button class="btn" id="rOpt" ${ps.length < 2 ? 'disabled' : ''}>Optimizar orden</button><button class="btn" id="rVaciar" ${ps.length ? '' : 'disabled'}>Vaciar</button></div>
         <div class="btns">${links.join('')}</div>
       </section>

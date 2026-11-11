@@ -8,10 +8,19 @@ export const debounce = (fn, ms = 150) => { let t; return (...a) => { clearTimeo
 export const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2));
 
 export function toast(msg, kind = '') {
+  const pila = document.getElementById('pila') || document.body;
   const t = document.createElement('div');
   t.className = 'toast ' + kind; t.textContent = msg; t.setAttribute('role', 'status');
-  document.body.appendChild(t); setTimeout(() => t.remove(), 3200);
+  pila.appendChild(t);
+  while (pila.children.length > 3) pila.firstElementChild.remove();
+  setTimeout(() => { t.classList.add('fuera'); setTimeout(() => t.remove(), 260); }, 3200);
 }
+
+// Estado vacío con el disco de tacógrafo dibujado (como en Adiestramientos)
+export const vacio = (texto, titulo = '', { ok = false, peq = false } = {}) =>
+  `<div class="vacio${ok ? ' ok' : ''}${peq ? ' peq' : ''}">${titulo ? `<b>${esc(titulo)}</b>` : ''}<span>${esc(texto)}</span></div>`;
+// Carga dentro de un panel: la aguja del disco girando
+export const cargandoHtml = (texto = 'Cargando…') => `<div class="carga-in"><i class="disco-carga peq" aria-hidden="true"></i>${esc(texto)}</div>`;
 
 export const hoy = () => new Date().toISOString().slice(0, 10);
 export const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -97,10 +106,9 @@ export function confirmBtn(btn, action, label = '¿Seguro?') {
   });
 }
 
-// Marca de la empresa: símbolo + WORTACH WORKSHOPS (cabecera) o logo completo (entrada)
-export const marcaHtml = (grande = false) => grande
-  ? `<span class="marca grande"><img class="marca-completo claro" src="icons/logo.png" alt="Wortach, el mundo del tacógrafo"><img class="marca-completo oscuro" src="icons/logo-oscuro.png" alt="Wortach, el mundo del tacógrafo"><span class="marca-workshops">WORKSHOPS</span></span>`
-  : `<span class="marca"><img class="marca-logo" src="icons/simbolo.png" alt="" width="27" height="30"><span class="marca-txt"><b>WORTACH</b><span>WORKSHOPS</span></span></span>`;
+// Marca de la empresa: logo + «Workshops», igual que «Adiestramientos» en el panel de cursos
+export const marcaHtml = () =>
+  `<span class="marca"><img class="marca-logo" src="icons/logo.png" alt="WORTACH" width="109" height="28"><span class="marca-txt">Workshops</span></span>`;
 
 // Tarjeta de taller (registro oficial): cuántos días le quedan y en qué tramo está
 export const diasHasta = iso => iso ? Math.round((new Date(iso + 'T12:00:00').getTime() - new Date(hoy() + 'T12:00:00').getTime()) / 864e5) : null;

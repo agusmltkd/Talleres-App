@@ -1,6 +1,6 @@
 // Agenda: calendario de visitas y revisiones de equipos
 import { S, on, emit, esAdmin, nombreDe, colorDe, comerciales, getRuta, setRuta } from './store.js';
-import { $, $$, esc, hoy, addDays, fmtDia, fmtFechaCorta, TIPOS_VISITA, norm, modal, estadoTarjeta, diasHasta } from './util.js';
+import { $, $$, esc, hoy, addDays, fmtDia, fmtFechaCorta, TIPOS_VISITA, norm, modal, estadoTarjeta, diasHasta, vacio } from './util.js';
 import { formVisita } from './ficha.js';
 
 let mes = hoy().slice(0, 7), dia = hoy(), quien = null;
@@ -47,7 +47,7 @@ function render() {
   const primero = new Date(y, m - 1, 1), dias = new Date(y, m, 0).getDate();
   const offset = (primero.getDay() + 6) % 7;
   const celdas = [];
-  for (let i = 0; i < offset; i++) celdas.push('<div class="cal-d vacio"></div>');
+  for (let i = 0; i < offset; i++) celdas.push('<div class="cal-d hueco"></div>');
   for (let d = 1; d <= dias; d++) {
     const iso = `${mes}-${String(d).padStart(2, '0')}`; const o = porDia.get(iso);
     celdas.push(`<button class="cal-d${iso === h ? ' hoy' : ''}${iso === dia ? ' sel' : ''}" data-dia="${iso}" aria-label="${fmtDia(iso)}"><span>${d}</span>
@@ -62,7 +62,9 @@ function render() {
     .sort((a, b) => a.tarjeta_hasta.localeCompare(b.tarjeta_hasta));
   const revProx = rev.filter(e => e.proxima_revision <= addDays(h, 60)).sort((a, b) => a.proxima_revision.localeCompare(b.proxima_revision));
   const opciones = `<option value="">Todo el equipo</option>` + comerciales().map(p => `<option value="${esc(p.id)}"${p.id === miVista() ? ' selected' : ''}>${esc(p.id === S.yo.id ? 'Solo las mías' : p.nombre)}</option>`).join('');
+  const nHoy = vis.filter(v => v.fecha === h && v.estado === 'planificada').length;
   $('#v-agenda').innerHTML = `
+    <div class="cab-vista"><div><h1>Agenda</h1><p>${nHoy ? `${nHoy} ${nHoy === 1 ? 'visita planificada' : 'visitas planificadas'} para hoy` : 'Nada planificado para hoy'}${atrasadas.length ? ` · ${atrasadas.length} sin cerrar` : ''}.</p></div></div>
     <div class="agenda">
       <section class="panel cal">
         <div class="cal-head">
@@ -77,13 +79,13 @@ function render() {
       </section>
       <section class="panel">
         <div class="row-between"><h2 class="cap">${esc(fmtDia(dia))}</h2><div class="btns"><button class="btn primary" id="nuevaCita">Planificar visita</button>${dia === h ? '<button class="btn" id="rutaDia">Hacer la ruta de hoy</button>' : ''}</div></div>
-        <div class="agenda-list">${delDia.map(item).join('') + revDia.map(itemRev).join('') || '<p class="note">Nada este día.</p>'}</div>
+        <div class="agenda-list">${delDia.map(item).join('') + revDia.map(itemRev).join('') || vacio('Elige otro día en el calendario o planifica una visita.', 'Nada este día', { peq: true })}</div>
       </section>
       <section class="panel">
         ${atrasadas.length ? `<h2 class="cap warn">Visitas planificadas sin cerrar (${atrasadas.length})</h2><div class="agenda-list">${atrasadas.map(item).join('')}</div>` : ''}
-        <h2 class="cap">Próximas dos semanas</h2><div class="agenda-list">${proximas.map(item).join('') || '<p class="note">No hay visitas planificadas.</p>'}</div>
-        <h2 class="cap">Tarjetas de taller que caducan (próximos 90 días)</h2><div class="agenda-list">${tarjetas.slice(0, 40).map(itemTarjeta).join('') || '<p class="note">Ningún taller caduca pronto.</p>'}${tarjetas.length > 40 ? `<p class="note">Y ${tarjetas.length - 40} más: filtra el mapa por «Tarjeta caduca en 90 días».</p>` : ''}</div>
-        <h2 class="cap">Revisiones de equipos (próximos 60 días)</h2><div class="agenda-list">${revProx.map(itemRev).join('') || '<p class="note">Sin revisiones próximas.</p>'}</div>
+        <h2 class="cap">Próximas dos semanas</h2><div class="agenda-list">${proximas.map(item).join('') || vacio('Planifica las próximas desde aquí o desde la ficha de cada taller.', 'No hay visitas planificadas', { peq: true })}</div>
+        <h2 class="cap">Tarjetas de taller que caducan (próximos 90 días)</h2><div class="agenda-list">${tarjetas.slice(0, 40).map(itemTarjeta).join('') || vacio('Ningún taller caduca en los próximos 90 días.', 'Todo en vigor', { peq: true, ok: true })}${tarjetas.length > 40 ? `<p class="note">Y ${tarjetas.length - 40} más: filtra el mapa por «Tarjeta caduca en 90 días».</p>` : ''}</div>
+        <h2 class="cap">Revisiones de equipos (próximos 60 días)</h2><div class="agenda-list">${revProx.map(itemRev).join('') || vacio('Ningún equipo tiene revisión en los próximos 60 días.', 'Sin revisiones próximas', { peq: true, ok: true })}</div>
       </section>
     </div>`;
 }

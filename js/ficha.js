@@ -1,6 +1,6 @@
 // Ficha de un taller: resumen, contactos, visitas, ventas y equipos
 import { S, on, emit, esAdmin, puedeEditar, nombreDe, colorDe, comerciales, guardar, crear, borrar, getRuta, setRuta } from './store.js';
-import { $, $$, esc, ESTADOS, estadoInfo, redBadges, ORIGEN, PRECISION, TIPOS_VISITA, TIPOS_EQUIPO, fmtFecha, fmtFechaCorta, fmtEur, hoy, addDays, iniciales, toast, confirmBtn, diasDesde, estadoTarjeta, textoTarjeta } from './util.js';
+import { $, $$, esc, ESTADOS, estadoInfo, redBadges, ORIGEN, PRECISION, TIPOS_VISITA, TIPOS_EQUIPO, fmtFecha, fmtFechaCorta, fmtEur, hoy, addDays, iniciales, toast, confirmBtn, diasDesde, estadoTarjeta, textoTarjeta, vacio, cargandoHtml } from './util.js';
 import { formulario } from './formulario.js';
 import { volarA, colocarAMano } from './mapa.js';
 import { buscarDireccion } from './geocodificar.js';
@@ -46,8 +46,8 @@ function render() {
   const eq = [...S.equipos.values()].filter(v => v.taller_id === t.id);
   const tabs = [['resumen', 'Resumen'], ['contactos', 'Contactos', contactos.length], ['visitas', 'Visitas', vis.length], ['ventas', 'Ventas', ven.length], ['equipos', 'Equipos', eq.length]];
   drawer().innerHTML = `
-    <div class="ficha-head">
-      <div><h2 class="titulo">${esc(t.nombre)}</h2><p class="note">${esc(t.direccion || '')}${t.cp ? ' · ' + esc(t.cp) : ''} ${esc(t.poblacion || '')}${t.provincia && t.provincia !== t.poblacion ? ' (' + esc(t.provincia) + ')' : ''}</p></div>
+    <div class="ficha-head" style="--c:var(${estadoInfo(t.estado).v === '--st-none' ? '--linea-2' : estadoInfo(t.estado).v})">
+      <div><div class="et"><span class="est-pill${t.estado ? '' : ' sin'}" style="--c:var(${estadoInfo(t.estado).v})"><i></i>${esc(estadoInfo(t.estado).label)}</span>${redBadges(t.redes)}${t.origen === 'kmz' ? ' <span class="badge src">No figura en el registro</span>' : ''}</div><h2 class="titulo">${esc(t.nombre)}</h2><p class="note">${esc(t.direccion || '')}${t.cp ? ' · ' + esc(t.cp) : ''} ${esc(t.poblacion || '')}${t.provincia && t.provincia !== t.poblacion ? ' (' + esc(t.provincia) + ')' : ''}</p></div>
       <button class="icon lg" data-cerrar aria-label="Cerrar ficha">×</button>
     </div>
     <div class="ftabs" role="tablist">${tabs.map(([k, l, n]) => `<button role="tab" data-tab="${k}" aria-selected="${k === pestana}">${l}${n ? `<span class="n">${n}</span>` : ''}</button>`).join('')}</div>
@@ -69,10 +69,9 @@ function resumen(body, t) {
   const proxVisita = [...S.visitas.values()].filter(v => v.taller_id === t.id && v.estado === 'planificada' && v.fecha >= hoy()).sort((a, b) => a.fecha.localeCompare(b.fecha))[0];
   const dias = diasDesde(t.ultima_visita);
   body.innerHTML = `
-    <div class="chips">${redBadges(t.redes) || '<span class="note">Sin red de marca conocida</span>'}${t.origen === 'kmz' ? ' <span class="badge src">No figura en el registro</span>' : ''}</div>
     ${(() => { const k = estadoTarjeta(t).k; if (!['caducada', 'd30', 'd90'].includes(k)) return '';
       return `<p class="aviso ${k === 'caducada' ? 'tj-caducada' : ''}"><span><b>Tarjeta de taller:</b> según el registro oficial, ${esc(textoTarjeta(t))}. ${k === 'caducada' ? 'Comprueba si la ha renovado.' : 'Buen momento para contactar.'}</span></p>`; })()}
-    ${!edit ? `<p class="aviso">Este taller es de ${esc(nombreDe(t.comercial_id) || 'otro comercial')}. Puedes consultarlo, pero solo lo edita su comercial o la dirección.</p>` : ''}
+    ${!edit ? `<p class="aviso info">Este taller es de ${esc(nombreDe(t.comercial_id) || 'otro comercial')}. Puedes consultarlo, pero solo lo edita su comercial o la dirección.</p>` : ''}
     <div class="kpis3">
       <div><span>Última visita</span><b>${t.ultima_visita ? fmtFechaCorta(t.ultima_visita) : '—'}</b>${dias != null ? `<small>hace ${dias} días</small>` : '<small>nunca</small>'}</div>
       <div><span>Próxima visita</span><b>${proxVisita ? fmtFechaCorta(proxVisita.fecha) : '—'}</b><small>${proxVisita ? esc(TIPOS_VISITA[proxVisita.tipo]) : 'sin planificar'}</small></div>
@@ -144,12 +143,12 @@ function resumen(body, t) {
 function pContactos(body, t) {
   const edit = puedeEditar(t);
   body.innerHTML = `${edit ? '<div class="btns"><button class="btn primary" id="addC">Añadir contacto</button></div>' : ''}
-    <div class="cards">${cargandoContactos ? '<p class="note">Cargando…</p>' : contactos.map(c => `
+    <div class="cards">${cargandoContactos ? cargandoHtml('Cargando contactos…') : contactos.map(c => `
       <div class="card"><div class="card-h"><b>${esc(c.nombre)}</b>${c.cargo ? `<span class="note">${esc(c.cargo)}</span>` : ''}</div>
         <div class="btns sm">${c.telefono ? `<a class="btn" href="tel:${esc(c.telefono.replace(/\s/g, ''))}">${esc(c.telefono)}</a>` : ''}${c.email ? `<a class="btn" href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : ''}</div>
         ${c.notas ? `<p class="note">${esc(c.notas)}</p>` : ''}
         ${edit ? `<div class="btns sm"><button class="btn" data-editc="${esc(c.id)}">Editar</button><button class="btn danger" data-delc="${esc(c.id)}">Eliminar</button></div>` : ''}
-      </div>`).join('') || '<p class="note">Aún no hay contactos. Añade al jefe de taller o a quien decide las compras.</p>'}</div>`;
+      </div>`).join('') || vacio('Añade al jefe de taller o a quien decide las compras.', 'Aún no hay contactos')}</div>`;
   const campos = [{ k: 'nombre', label: 'Nombre', required: true }, { k: 'cargo', label: 'Cargo' }, { k: 'telefono', label: 'Teléfono', type: 'tel' }, { k: 'email', label: 'Email', type: 'email' }, { k: 'notas', label: 'Notas', type: 'textarea' }];
   $('#addC', body)?.addEventListener('click', () => formulario({ titulo: 'Nuevo contacto', campos, alGuardar: async d => { const r = await S.api.insert('contactos', { ...d, taller_id: t.id }); contactos.push(r); render(); } }));
   $$('[data-editc]', body).forEach(b => b.addEventListener('click', () => {
@@ -200,7 +199,7 @@ function pVisitas(body, t, { vis }) {
         ${v.resumen ? `<p>${esc(v.resumen)}</p>` : ''}${v.proximo_paso ? `<p class="note">Próximo paso: ${esc(v.proximo_paso)}</p>` : ''}
         ${mia ? `<div class="btns sm">${v.estado === 'planificada' ? `<button class="btn primary" data-hecha="${esc(v.id)}">Marcar como hecha</button>` : ''}<button class="btn" data-editv="${esc(v.id)}">Editar</button><button class="btn danger" data-delv="${esc(v.id)}">Eliminar</button></div>` : ''}
       </div>`;
-    }).join('') || '<p class="note">Todavía no hay visitas.</p>'}</div>`;
+    }).join('') || vacio('Registra la primera visita o llamada para empezar su historial.', 'Todavía no hay visitas')}</div>`;
   $('#addV', body)?.addEventListener('click', () => formVisita(t));
   $('#planV', body)?.addEventListener('click', () => formVisita(t, null, { estado: 'planificada', fecha: addDays(hoy(), 7) }));
   $$('[data-editv]', body).forEach(b => b.addEventListener('click', () => formVisita(t, S.visitas.get(b.dataset.editv))));
@@ -225,7 +224,7 @@ function pVentas(body, t, { ven }) {
     ${edit ? '<div class="btns"><button class="btn primary" id="addS">Nuevo presupuesto o pedido</button></div>' : ''}
     <div class="tablewrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th class="n">Importe</th><th>Estado</th><th></th></tr></thead><tbody>
     ${ven.sort((a, b) => b.fecha.localeCompare(a.fecha)).map(v => `<tr><td>${fmtFechaCorta(v.fecha)}</td><td>${esc(v.concepto)}<div class="note">${v.tipo === 'pedido' ? 'Pedido' : 'Presupuesto'} · ${esc(nombreDe(v.comercial_id) || '')}</div></td><td class="n">${fmtEur(v.importe)}</td><td><span class="pill ${v.estado}">${v.estado === 'abierto' ? 'Abierto' : v.estado === 'ganado' ? 'Ganado' : 'Perdido'}</span></td>
-      <td>${edit ? `<button class="icon" data-edits="${esc(v.id)}" aria-label="Editar">✎</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="5" class="note">Sin presupuestos ni pedidos.</td></tr>'}
+      <td>${edit ? `<button class="icon" data-edits="${esc(v.id)}" aria-label="Editar">✎</button>` : ''}</td></tr>`).join('') || `<tr><td colspan="5">${vacio('Anota aquí los presupuestos y pedidos de este taller.', 'Sin presupuestos ni pedidos')}</td></tr>`}
     </tbody></table></div>`;
   $('#addS', body)?.addEventListener('click', () => formulario({ titulo: 'Nuevo presupuesto o pedido', campos, alGuardar: async d => { await crear('ventas', { ...d, taller_id: t.id, comercial_id: t.comercial_id || S.yo.id }); toast('Guardado'); } }));
   $$('[data-edits]', body).forEach(b => b.addEventListener('click', () => {
@@ -254,7 +253,7 @@ function pEquipos(body, t, { eq }) {
         ${e.proxima_revision ? `<div><span class="pill ${venc ? 'perdido' : pronto ? 'planificada' : 'hecha'}">${venc ? 'Revisión vencida' : pronto ? 'Revisión pronto' : 'Revisión'}: ${fmtFecha(e.proxima_revision)}</span></div>` : ''}
         ${e.notas ? `<p class="note">${esc(e.notas)}</p>` : ''}
         ${edit ? `<div class="btns sm"><button class="btn" data-edite="${esc(e.id)}">Editar</button><button class="btn danger" data-dele="${esc(e.id)}">Eliminar</button></div>` : ''}</div>`;
-    }).join('') || '<p class="note">No hay equipos registrados. Anota los que le habéis vendido para que la agenda os avise de sus revisiones.</p>'}</div>`;
+    }).join('') || vacio('Anota los que le habéis vendido para que la agenda os avise de sus revisiones.', 'No hay equipos registrados')}</div>`;
   $('#addE', body)?.addEventListener('click', () => formulario({ titulo: 'Nuevo equipo', campos, alGuardar: async d => { await crear('equipos', { ...d, taller_id: t.id }); toast('Equipo añadido'); } }));
   $$('[data-edite]', body).forEach(b => b.addEventListener('click', () => { const e = S.equipos.get(b.dataset.edite); formulario({ titulo: 'Editar equipo', campos, valores: e, alGuardar: d => guardar('equipos', e.id, d) }); }));
   $$('[data-dele]', body).forEach(b => confirmBtn(b, () => borrar('equipos', b.dataset.dele)));

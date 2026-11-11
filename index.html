@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Wortach Workshops</title>
 <meta name="description" content="Wortach Workshops. Mapa comercial de talleres de tacógrafo: clientes, visitas, ventas y rutas.">
-<meta name="theme-color" content="#1f7f4a">
+<meta name="theme-color" content="#ffffff">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -13,13 +13,16 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112,600;112,700;112,800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="css/app.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 </head>
 <body>
-<div id="cargando" class="cargando"><div class="spinner" aria-hidden="true"></div><p>Cargando…</p></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="simbolo" viewBox="0 0 223 247"><g fill="none" stroke="currentColor" stroke-width="16"><path d="M8 8H112A103 103 0 0 1 215 111V239H8Z"/><circle cx="111.5" cy="127" r="96"/><path d="M111.5 8V239M8 127H215"/></g></symbol>
+</svg>
+<div id="cargando" class="cargando"><i class="disco-carga" aria-hidden="true"></i><p>Cargando…</p></div>
 <div id="login" class="login" hidden></div>
 
 <div id="app" hidden>
@@ -79,6 +82,7 @@
   <aside id="ficha" class="ficha" hidden aria-label="Ficha del taller"></aside>
 </div>
 <div id="modal" class="modal" hidden></div>
+<div id="pila" aria-live="polite"></div>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

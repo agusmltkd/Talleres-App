@@ -32,29 +32,38 @@ async function arrancar() {
   await entrarEnApp();
 }
 
-function pantallaError(msg) { $('#cargando').hidden = true; $('#login').hidden = false; $('#login').innerHTML = `<div class="login-card"><h1>${marcaHtml(true)}</h1><p class="aviso">${esc(msg)}</p></div>`; }
+// Pantalla de acceso partida en dos, como la del panel de Adiestramientos
+const ladoMarca = () => `<div class="login-marca">
+    <img src="icons/logo.png" alt="WORTACH, el mundo del tacógrafo" width="156" height="40">
+    <div><h1>Wortach Workshops</h1><p>El mapa comercial de los talleres de tacógrafo: clientes, visitas, ventas y rutas del equipo.</p></div>
+    <svg class="marca-agua" aria-hidden="true"><use href="#simbolo"/></svg>
+  </div>`;
+function mostrarAcceso(html, solo = false) {
+  $('#cargando').hidden = true; $('#app').hidden = true;
+  const l = $('#login'); l.hidden = false; l.classList.toggle('solo', solo);
+  l.innerHTML = solo ? html : `${ladoMarca()}<div class="login-form">${html}</div>`;
+}
+
+function pantallaError(msg) { mostrarAcceso(`<div class="login-card"><h2>No se puede entrar</h2><p class="aviso">${esc(msg)}</p><button class="btn big" type="button" onclick="location.reload()">Volver a intentarlo</button></div>`); }
 
 function pantallaLogin(modo) {
-  $('#cargando').hidden = true; $('#app').hidden = true; $('#login').hidden = false;
   if (modo === 'demo') {
-    $('#login').innerHTML = `<div class="login-card">
-      <h1>${marcaHtml(true)}</h1><p class="login-sub">Talleres de tacógrafo · acceso del equipo</p>
-      <p class="aviso">${supabaseConfigurado ? 'Modo demostración.' : 'Todavía no está conectada a Supabase, así que funciona en modo demostración.'} Los cambios se guardan solo en este navegador.</p>
-      <p class="note">Entra como:</p>
+    mostrarAcceso(`<div class="login-card">
+      <h2>Entrar</h2><p class="sub">Elige con quién quieres probarla.</p>
+      <p class="aviso info">${supabaseConfigurado ? 'Modo demostración.' : 'Todavía no está conectada a Supabase, así que funciona en modo demostración.'} Los cambios se guardan solo en este navegador.</p>
       <div class="demo-users">${S.api.usuariosDemo.map(u => `<button class="btn ${u.rol === 'admin' ? 'primary' : ''}" data-u="${esc(u.id)}"><span class="avatar" style="background:${esc(u.color)}">${esc(iniciales(u.nombre))}</span>${esc(u.nombre)}<small>${u.rol === 'admin' ? 'Dirección: ve y asigna todo' : 'Comercial'}</small></button>`).join('')}</div>
-    </div>`;
+    </div>`);
     $$('[data-u]', $('#login')).forEach(b => b.addEventListener('click', async () => { await S.api.entrar(b.dataset.u); entrarEnApp(); }));
     return;
   }
-  $('#login').innerHTML = `<form class="login-card" id="loginForm">
-      <h1>${marcaHtml(true)}</h1><p class="login-sub">Talleres de tacógrafo · acceso del equipo</p>
-      <p class="note">Entra con el email y la contraseña que te ha dado la empresa.</p>
-      <label class="field"><span>Email</span><input type="email" name="email" autocomplete="username" required></label>
+  mostrarAcceso(`<form class="login-card" id="loginForm">
+      <h2>Entrar</h2><p class="sub">Con el correo y la contraseña que te ha dado la empresa.</p>
+      <label class="field"><span>Correo</span><input type="email" name="email" autocomplete="username" required></label>
       <label class="field"><span>Contraseña</span><input type="password" name="password" autocomplete="current-password" required></label>
       <p class="note err" hidden></p>
       <button class="btn primary big" type="submit">Entrar</button>
-      <button class="linklike" type="button" id="olvido">He olvidado mi contraseña</button>
-    </form>`;
+      <button class="linklike" type="button" id="olvido">¿Has olvidado la contraseña?</button>
+    </form>`);
   const f = $('#loginForm'), err = f.querySelector('.err');
   f.addEventListener('submit', async e => {
     e.preventDefault(); err.hidden = true; const b = f.querySelector('[type=submit]'); b.disabled = true; b.textContent = 'Entrando…';
@@ -63,8 +72,8 @@ function pantallaLogin(modo) {
   });
   $('#olvido').addEventListener('click', async () => {
     const email = f.email.value.trim();
-    if (!email) { err.hidden = false; err.textContent = 'Escribe primero tu email.'; return; }
-    try { await S.api.recordar(email); err.hidden = false; err.textContent = 'Te hemos enviado un email para crear una contraseña nueva.'; }
+    if (!email) { err.hidden = false; err.textContent = 'Escribe primero tu correo.'; return; }
+    try { await S.api.recordar(email); err.hidden = false; err.textContent = 'Te hemos enviado un correo para crear una contraseña nueva.'; }
     catch (x) { err.hidden = false; err.textContent = x.message; }
   });
 }
@@ -116,7 +125,7 @@ function irA() {
 
 function pintarUsuario() {
   const y = S.yo;
-  $('#yo').innerHTML = `<span class="avatar" style="background:${esc(y.color)}">${esc(iniciales(y.nombre))}</span><span class="yo-n">${esc(y.nombre)}<small>${esc(y.rol === 'admin' ? 'Dirección' : 'Comercial')}${S.api.modo === 'demo' ? ' · demo' : ''}</small></span>`;
+  $('#yo').innerHTML = `<span class="avatar" style="background:${esc(y.color)}">${esc(iniciales(y.nombre))}</span><span class="yo-n"><span>${esc(y.nombre)}</span><small>${esc(y.rol === 'admin' ? 'Dirección' : 'Comercial')}${S.api.modo === 'demo' ? ' · demo' : ''}</small></span><svg class="flecha" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 $('#yo').addEventListener('click', () => {
   const demo = S.api.modo === 'demo';

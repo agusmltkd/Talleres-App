@@ -2,7 +2,7 @@
 import { S, on, emit, esAdmin, nombreDe, colorDe, comerciales, getRuta } from './store.js';
 import { asignarTalleres } from './asignar.js';
 import { ponerFondo, ESTILOS, estiloActual, guardarEstilo } from './fondo.js';
-import { $, $$, esc, norm, css, hav, ESTADOS, REDES, TARJETA, estadoInfo, estadoTarjeta, redBadges, fmtFechaCorta, diasDesde, iniciales, debounce, toast } from './util.js';
+import { $, $$, esc, norm, css, hav, ESTADOS, REDES, TARJETA, estadoInfo, estadoTarjeta, redBadges, fmtFechaCorta, diasDesde, iniciales, debounce, toast, vacio } from './util.js';
 
 export let map = null;
 const F = { q: '', zona: '', prov: '', com: '', origen: '', estados: new Set(), redes: new Set(), sinVisita: false, tarjeta: false };
@@ -169,8 +169,8 @@ function renderLista() {
       <span class="rt">${com}<button class="icon" data-ruta="${esc(t.id)}" aria-label="${enRuta ? 'Quitar de la ruta' : 'Añadir a la ruta'}" title="${enRuta ? 'Quitar de la ruta' : 'Añadir a la ruta'}">${enRuta ? '✓' : '+'}</button></span>
       <span class="sub">${d != null ? `<b>${d < 10 ? d.toFixed(1) : Math.round(d)} km</b> · ` : ''}${esc(t.poblacion || '')}${t.provincia && t.provincia !== t.poblacion ? ' · ' + esc(t.provincia) : ''}${t.ultima_visita ? ' · visitado ' + fmtFechaCorta(t.ultima_visita) : ''} ${redBadges(t.redes)}${t.origen === 'kmz' ? ' <span class="badge src">No figura en el registro</span>' : ''}${tjBadge(t)}</span>
     </div>`;
-  }).join('') || (S.talleres.size ? '<p class="note pad">Ningún taller cumple estos filtros.</p>'
-    : `<p class="note pad">${esAdmin() ? 'Todavía no hay talleres cargados.' : 'Todavía no tienes talleres asignados. Cuando la dirección te asigne una zona, aparecerán aquí y en el mapa. Mientras, puedes añadir talleres tú mismo.'}</p>`);
+  }).join('') || (S.talleres.size ? vacio('Prueba a quitar algún filtro o a buscar otra cosa.', 'Ningún taller cumple estos filtros')
+    : (esAdmin() ? vacio('Cárgalos desde Gestión → Datos.', 'Todavía no hay talleres') : vacio('Cuando la dirección te asigne una zona, aparecerán aquí y en el mapa. Mientras, puedes añadir talleres tú mismo.', 'Todavía no tienes talleres asignados')));
 }
 
 function tjBadge(t) {

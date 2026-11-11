@@ -60,12 +60,13 @@ function renderAsignar() {
 }
 
 function render() {
-  if (!esAdmin()) { $('#v-admin').innerHTML = '<p class="note pad">Solo la dirección tiene acceso a esta sección.</p>'; return; }
+  if (!esAdmin()) { $('#v-admin').innerHTML = '<div class="panel" style="max-width:560px;margin:0 auto"><div class="vacio"><b>Sección de la dirección</b><span>Solo la dirección tiene acceso a Gestión.</span></div></div>'; return; }
   const perfiles = [...S.perfiles.values()].sort((a, b) => (b.activo - a.activo) || a.nombre.localeCompare(b.nombre, 'es'));
   const ref = (SUPABASE_URL.match(/https:\/\/([a-z0-9-]+)\.supabase\.co/i) || [])[1];
   const aprox = [...S.talleres.values()].filter(t => ['cp', 'zona', 'loc'].includes(t.precision)).length;
   const oficiales = [...S.talleres.values()].filter(t => t.origen === 'reg').length;
   $('#v-admin').innerHTML = `
+    <div class="cab-vista" style="max-width:1100px"><div><h1>Gestión</h1><p>Usuarios, reparto de zonas y datos de la aplicación.</p></div></div>
     <div class="admin">
       <section class="panel">
         <h2 class="cap">Usuarios</h2>

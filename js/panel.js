@@ -1,6 +1,6 @@
 // Panel de resultados
 import { S, on, esAdmin, comerciales } from './store.js';
-import { $, esc, hoy, addDays, fmtEur, fmtNum, diasDesde, ESTADOS, estadoTarjeta } from './util.js';
+import { $, esc, hoy, addDays, fmtEur, fmtNum, diasDesde, ESTADOS, estadoTarjeta, vacio } from './util.js';
 
 let periodo = 'mes', quien = null;
 
@@ -48,25 +48,28 @@ function render() {
   // cartera por comercial
   const cartera = coms.map(p => { const ts = [...S.talleres.values()].filter(t => t.comercial_id === p.id); return { p, total: ts.length, por: ESTADOS.map(e => ts.filter(t => (t.estado || '') === e.k).length) }; }).filter(r => r.total);
 
+  const nombrePeriodo = { mes: 'este mes', '30': 'los últimos 30 días', trimestre: 'este trimestre', ano: 'este año', todo: 'desde el principio' }[periodo];
+  const quienTxt = sel ? (sel === S.yo.id ? 'Tus resultados' : 'Resultados de ' + (S.perfiles.get(sel)?.nombre || '')) : 'Resultados de todo el equipo';
+  const pctCli = talleres.length ? Math.round(100 * clientes.length / talleres.length) : 0;
   $('#v-panel').innerHTML = `
-    <div class="panel-head">
-      <h2 class="cap">Resultados</h2>
+    <div class="cab-vista">
+      <div><h1>Resultados</h1><p>${esc(quienTxt)}, ${esc(nombrePeriodo)}.</p></div><span class="esp"></span>
       <select id="pPeriodo" aria-label="Periodo">${[['mes', 'Este mes'], ['30', 'Últimos 30 días'], ['trimestre', 'Este trimestre'], ['ano', 'Este año'], ['todo', 'Desde el principio']].map(([k, l]) => `<option value="${k}"${k === periodo ? ' selected' : ''}>${l}</option>`).join('')}</select>
       ${admin ? `<select id="pQuien" aria-label="Comercial"><option value="">Todo el equipo</option>${coms.map(p => `<option value="${esc(p.id)}"${p.id === sel ? ' selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select>` : ''}
     </div>
-    <div class="tiles">
-      <div class="tile"><span>Visitas hechas</span><b>${fmtNum(visitas.length)}</b><small>en el periodo</small></div>
-      <div class="tile"><span>Vendido</span><b>${fmtEur(suma(ganadas))}</b><small>${ganadas.length} ${ganadas.length === 1 ? 'venta ganada' : 'ventas ganadas'}</small></div>
-      <div class="tile"><span>En negociación</span><b>${fmtEur(suma(abiertas))}</b><small>${abiertas.length} presupuestos abiertos</small></div>
-      <div class="tile"><span>Conversión</span><b>${conv == null ? '—' : conv + ' %'}</b><small>ganados sobre cerrados</small></div>
-      <div class="tile"><span>Clientes</span><b>${fmtNum(clientes.length)}</b><small>de ${fmtNum(talleres.length)} talleres ${sel ? 'asignados' : ''}</small></div>
-      <div class="tile ${olvidados.length ? 'warn' : ''}"><span>Clientes sin visitar</span><b>${fmtNum(olvidados.length)}</b><small>hace más de 90 días</small></div>
-      <div class="tile ${tjPronto.length ? 'warn' : ''}"><span>Tarjetas que caducan</span><b>${fmtNum(tjPronto.length)}</b><small>en 90 días · ${fmtNum(tjPronto.filter(t => estadoTarjeta(t).k === 'd30').length)} en 30</small></div>
+    <div class="cifras">
+      <div class="cifra verde"><b>${fmtEur(suma(ganadas))}</b><span>Vendido</span><small>${ganadas.length} ${ganadas.length === 1 ? 'venta ganada' : 'ventas ganadas'}</small></div>
+      <div class="cifra"><b>${fmtEur(suma(abiertas))}</b><span>En negociación</span><small>${abiertas.length} ${abiertas.length === 1 ? 'presupuesto abierto' : 'presupuestos abiertos'}</small></div>
+      <div class="cifra"><b>${fmtNum(visitas.length)}</b><span>Visitas hechas</span><small>en el periodo</small></div>
+      <div class="cifra"><b>${conv == null ? '—' : conv + ' %'}</b><span>Conversión</span><small>ganados sobre cerrados</small></div>
+      <div class="cifra"><b>${fmtNum(clientes.length)}</b><span>Clientes</span><small>de ${fmtNum(talleres.length)} talleres${sel ? ' asignados' : ''}</small><span class="bar-mini"><i style="width:${pctCli}%"></i></span></div>
+      <div class="cifra ${olvidados.length ? 'aviso-c' : ''}"><b>${fmtNum(olvidados.length)}</b><span>Clientes sin visitar</span><small>hace más de 90 días</small></div>
+      <div class="cifra ${tjPronto.length ? 'alerta' : ''}"><b>${fmtNum(tjPronto.length)}</b><span>Tarjetas que caducan</span><small>en 90 días · ${fmtNum(tjPronto.filter(t => estadoTarjeta(t).k === 'd30').length)} en 30</small></div>
     </div>
     <div class="charts">
       <section class="panel"><h3 class="ch-t">Ventas ganadas por mes</h3><p class="note">Últimos 12 meses${sel ? '' : ', todo el equipo'}</p>${barrasV(porMes.map(x => ({ l: new Date(x.m + '-15').toLocaleDateString('es-ES', { month: 'short' }), v: x.v, t: `${new Date(x.m + '-15').toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}: ${fmtEur(x.v)}` })), fmtEur)}</section>
       ${admin && !sel ? `<section class="panel"><h3 class="ch-t">Visitas hechas por comercial</h3><p class="note">En el periodo elegido</p>${barrasH(porCom.map(x => ({ l: x.p.nombre, v: x.n })), fmtNum)}</section>` : ''}
-      <section class="panel"><h3 class="ch-t">Cartera por comercial</h3><p class="note">Talleres asignados según su estado</p>${cartera.length ? apiladas(cartera) : '<p class="note">Todavía no hay talleres asignados.</p>'}</section>
+      <section class="panel"><h3 class="ch-t">Cartera por comercial</h3><p class="note">Talleres asignados según su estado</p>${cartera.length ? apiladas(cartera) : vacio('Cuando se asignen talleres a los comerciales, aquí verás su cartera por estado.', 'Todavía no hay talleres asignados')}</section>
       ${olvidados.length ? `<section class="panel"><h3 class="ch-t">Clientes a los que toca volver</h3><p class="note">Sin visita en más de 90 días</p><div class="agenda-list">${olvidados.sort((a, b) => String(a.ultima_visita || '').localeCompare(String(b.ultima_visita || ''))).slice(0, 12).map(t => `<div class="ag-item"><button class="linklike" data-open="${esc(t.id)}">${esc(t.nombre)}</button><div class="note">${esc(t.poblacion || '')} · ${t.ultima_visita ? 'última visita hace ' + diasDesde(t.ultima_visita) + ' días' : 'nunca visitado'}</div></div>`).join('')}</div></section>` : ''}
     </div>
     ${admin ? tablaComerciales(coms, enRango, suma) : ''}`;
@@ -82,12 +85,12 @@ function tablaComerciales(coms, enRango, suma) {
     return `<tr><td><span class="dotc" style="background:${esc(p.color)}"></span>${esc(p.nombre)}</td><td class="n">${ts.length}</td><td class="n">${ts.filter(t => t.estado === 'cliente').length}</td><td class="n">${vs.length}</td>
       <td class="n">${fmtEur(suma(ve.filter(v => v.estado === 'abierto')))}</td><td class="n">${fmtEur(suma(g))}</td><td class="n">${g.length + pe.length ? Math.round(100 * g.length / (g.length + pe.length)) + ' %' : '—'}</td></tr>`;
   }).join('');
-  return `<section class="panel"><h3 class="ch-t">Por comercial</h3><div class="tablewrap"><table><thead><tr><th>Comercial</th><th class="n">Talleres</th><th class="n">Clientes</th><th class="n">Visitas</th><th class="n">Abierto</th><th class="n">Ganado</th><th class="n">Conversión</th></tr></thead><tbody>${rows || '<tr><td colspan="7" class="note">Sin comerciales.</td></tr>'}</tbody></table></div></section>`;
+  return `<section class="panel"><h3 class="ch-t">Por comercial</h3><div class="tablewrap"><table><thead><tr><th>Comercial</th><th class="n">Talleres</th><th class="n">Clientes</th><th class="n">Visitas</th><th class="n">Abierto</th><th class="n">Ganado</th><th class="n">Conversión</th></tr></thead><tbody>${rows || `<tr><td colspan="7">${vacio('Da de alta a los comerciales en Gestión.', 'Todavía no hay comerciales')}</td></tr>`}</tbody></table></div></section>`;
 }
 
 // ---- gráficos SVG sencillos ----
 function barrasV(datos, fmt) {
-  if (!datos.some(d => d.v > 0)) return '<p class="note vacio-chart">Todavía no hay ventas ganadas en estos meses. Aparecerán aquí cuando se marque un presupuesto o pedido como ganado.</p>';
+  if (!datos.some(d => d.v > 0)) return vacio('Aparecerán aquí cuando se marque un presupuesto o pedido como ganado.', 'Todavía no hay ventas ganadas');
   const W = 560, H = 200, pl = 8, pr = 8, pt = 22, pb = 26;
   const max = Math.max(1, ...datos.map(d => d.v));
   const bw = (W - pl - pr) / datos.length;
@@ -96,14 +99,14 @@ function barrasV(datos, fmt) {
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Gráfico de barras">
     <line x1="${pl}" x2="${W - pr}" y1="${H - pb + 0.5}" y2="${H - pb + 0.5}" class="axis"/>
     ${datos.map((d, i) => { const x = pl + i * bw + bw * 0.18, w = bw * 0.64, yy = y(d.v), h = H - pb - yy;
-      return `<g class="bar"><rect x="${pl + i * bw}" y="${pt}" width="${bw}" height="${H - pt - pb}" class="hit"><title>${esc(d.t || d.l + ': ' + fmt(d.v))}</title></rect>
+      return `<g class="bar${i === lastIdx ? ' ult' : ''}" style="--i:${i}"><rect x="${pl + i * bw}" y="${pt}" width="${bw}" height="${H - pt - pb}" class="hit"><title>${esc(d.t || d.l + ': ' + fmt(d.v))}</title></rect>
         ${d.v ? `<path d="M${x},${H - pb} V${yy + Math.min(4, h)} Q${x},${yy} ${x + Math.min(4, w / 2)},${yy} H${x + w - Math.min(4, w / 2)} Q${x + w},${yy} ${x + w},${yy + Math.min(4, h)} V${H - pb} Z" class="fill"/>` : ''}
         <text x="${x + w / 2}" y="${H - 8}" class="lbl" text-anchor="middle">${esc(d.l)}</text>
         ${i === lastIdx || d.v === max ? `<text x="${x + w / 2}" y="${yy - 6}" class="val" text-anchor="middle">${esc(fmt(d.v))}</text>` : ''}</g>`; }).join('')}
   </svg>`;
 }
 function barrasH(datos, fmt) {
-  if (!datos.length) return '<p class="note">Sin datos.</p>';
+  if (!datos.length) return vacio('Sin datos en este periodo.', '', { peq: true });
   const max = Math.max(1, ...datos.map(d => d.v));
   return `<div class="hbars">${datos.sort((a, b) => b.v - a.v).map(d => `<div class="hb" title="${esc(d.l)}: ${esc(fmt(d.v))}"><span class="hb-l">${esc(d.l)}</span><span class="hb-t"><i style="width:${100 * d.v / max}%"></i></span><span class="hb-v">${esc(fmt(d.v))}</span></div>`).join('')}</div>`;
 }
